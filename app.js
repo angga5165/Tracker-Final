@@ -1,20 +1,20 @@
-// --- DATABASE & STATE MANAGEMENT ---
+﻿// --- DATABASE & STATE MANAGEMENT ---
 const STORAGE_KEY = 'expense-tracker-data';
 const BUDGET_KEY = 'expense-tracker-budget';
 const BALANCE_KEY = 'expense-tracker-balance';
 
 // --- SUPABASE CLIENT ---
-const SUPABASE_URL = 'https://REPLACE_WITH_YOUR_PROJECT_URL.supabase.co';
-const SUPABASE_ANON_KEY = 'REPLACE_WITH_YOUR_ANON_KEY';
+const SUPABASE_URL = 'https://allrxtxgsdbrmotkogeq.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFsbHJ4dHhnc2Ricm1vdGtvZ2VxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5MDYwOTIsImV4cCI6MjA5NjQ4MjA5Mn0.9WIHNZaLTC01PwdtYAhk7JIgphGFu5dYRBoTJKbERFY';
 
-let supabase;
+let supabaseClient;
 try {
-  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 } catch (e) {
   console.error('[Supabase] Gagal inisialisasi client:', e);
 }
 
-// Active user ID — set after successful login, null when logged out
+// Active user ID â€” set after successful login, null when logged out
 let currentUserId = null;
 
 // --- AUTH HELPERS ---
@@ -53,9 +53,9 @@ async function handleAuthSubmit() {
 
   let result;
   if (_authTab === 'login') {
-    result = await supabase.auth.signInWithPassword({ email, password });
+    result = await supabaseClient.auth.signInWithPassword({ email, password });
   } else {
-    result = await supabase.auth.signUp({ email, password });
+    result = await supabaseClient.auth.signUp({ email, password });
   }
 
   if (submitBtn) {
@@ -68,7 +68,7 @@ async function handleAuthSubmit() {
     return;
   }
 
-  // signUp with email confirmation required — session is null until confirmed
+  // signUp with email confirmation required â€” session is null until confirmed
   if (_authTab === 'register' && !result.data.session) {
     if (errorEl) {
       errorEl.style.color = '#27ae60';
@@ -77,11 +77,11 @@ async function handleAuthSubmit() {
     return;
   }
 
-  // Success — onAuthStateChange (added in Task 12) will handle the rest
+  // Success â€” onAuthStateChange (added in Task 12) will handle the rest
 }
 
 async function handleLogout() {
-  await supabase.auth.signOut();
+  await supabaseClient.auth.signOut();
   currentUserId = null;
   showAuthScreen();
 }
@@ -200,7 +200,7 @@ function generateId() {
 
 async function loadExpenses() {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
       .from('transactions')
       .select('*')
       .eq('user_id', currentUserId)
@@ -208,7 +208,7 @@ async function loadExpenses() {
 
     if (error) throw error;
 
-    // Map snake_case DB columns → camelCase JS fields
+    // Map snake_case DB columns â†’ camelCase JS fields
     // Also ensure backward-compat fields type and source exist
     let needsMigration = false;
     const updated = (data || []).map(row => {
@@ -231,7 +231,7 @@ async function loadExpenses() {
 
     if (needsMigration) await saveExpenses(updated);
 
-    // New user with no data — seed with SAMPLE_DATA
+    // New user with no data â€” seed with SAMPLE_DATA
     if (updated.length === 0) {
       const entries = SAMPLE_DATA.map(item => ({
         ...item,
@@ -266,7 +266,7 @@ async function saveExpenses(expenses) {
       transfer_to:     e.transferTo     || null,
       income_category: e.incomeCategory || null,
     }));
-    const { error } = await supabase
+    const { error } = await supabaseClient
       .from('transactions')
       .upsert(rows, { onConflict: 'id' });
     if (error) throw error;
@@ -291,7 +291,7 @@ async function addExpense(entry) {
       transfer_to:     newEntry.transferTo     || null,
       income_category: newEntry.incomeCategory || null,
     };
-    const { error } = await supabase.from('transactions').insert(row);
+    const { error } = await supabaseClient.from('transactions').insert(row);
     if (error) throw error;
     return newEntry;
   } catch (e) {
@@ -302,7 +302,7 @@ async function addExpense(entry) {
 
 async function updateExpense(id, updates) {
   try {
-    // Map camelCase JS fields → snake_case DB columns
+    // Map camelCase JS fields â†’ snake_case DB columns
     const dbUpdates = {};
     if (updates.date            !== undefined) dbUpdates.date            = updates.date;
     if (updates.dayName         !== undefined) dbUpdates.day_name        = updates.dayName;
@@ -314,7 +314,7 @@ async function updateExpense(id, updates) {
     if (updates.transferTo      !== undefined) dbUpdates.transfer_to     = updates.transferTo;
     if (updates.incomeCategory  !== undefined) dbUpdates.income_category = updates.incomeCategory;
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
       .from('transactions')
       .update(dbUpdates)
       .eq('id', id)
@@ -345,7 +345,7 @@ async function updateExpense(id, updates) {
 
 async function deleteExpense(id) {
   try {
-    const { error, count } = await supabase
+    const { error, count } = await supabaseClient
       .from('transactions')
       .delete({ count: 'exact' })
       .eq('id', id)
@@ -362,7 +362,7 @@ async function deleteExpense(id) {
 // Balance storage and calculation helper functions
 async function loadBalance() {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
       .from('balances')
       .select('*')
       .eq('user_id', currentUserId)
@@ -378,7 +378,7 @@ async function loadBalance() {
       };
     }
 
-    // No row exists — create default and return it
+    // No row exists â€” create default and return it
     const defaultBalance = {
       initialDompet: 0,
       initialATM:    0,
@@ -398,7 +398,7 @@ async function loadBalance() {
 
 async function saveBalance(balanceData) {
   try {
-    const { error } = await supabase
+    const { error } = await supabaseClient
       .from('balances')
       .upsert({
         user_id:        currentUserId,
@@ -453,7 +453,7 @@ async function calculateCurrentBalance() {
 
 async function loadBudgets() {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
       .from('budgets')
       .select('*')
       .eq('user_id', currentUserId);
@@ -478,7 +478,7 @@ async function loadBudgets() {
 async function loadBudget(monthStr) {
   if (!monthStr) monthStr = getActiveMonthStr();
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
       .from('budgets')
       .select('*')
       .eq('user_id', currentUserId)
@@ -495,7 +495,7 @@ async function loadBudget(monthStr) {
       };
     }
 
-    // No row for this month — create default and return it
+    // No row for this month â€” create default and return it
     const newBudget = {
       month:       monthStr,
       categories:  { ...DEFAULT_BUDGET.categories },
@@ -515,7 +515,7 @@ async function loadBudget(monthStr) {
 
 async function saveBudget(budget) {
   try {
-    const { error } = await supabase
+    const { error } = await supabaseClient
       .from('budgets')
       .upsert({
         user_id:      currentUserId,
@@ -792,15 +792,15 @@ async function viewDashboard() {
         typeClass = 'income';
         sign = '+';
         dotClass = 'income-dot';
-        subtitle = `${tx.incomeCategory || 'Pemasukan'} • Ke ${tx.source}`;
+        subtitle = `${tx.incomeCategory || 'Pemasukan'} â€¢ Ke ${tx.source}`;
       } else if (tx.type === 'transfer') {
         typeClass = 'transfer';
         sign = '';
         dotClass = 'transfer-dot';
         const to = tx.transferTo || (tx.source === 'Dompet' ? 'ATM' : 'Dompet');
-        subtitle = `Transfer • ${tx.source} → ${to}`;
+        subtitle = `Transfer â€¢ ${tx.source} â†’ ${to}`;
       } else {
-        subtitle = `${tx.category || 'Lainnya'} • Dari ${tx.source}`;
+        subtitle = `${tx.category || 'Lainnya'} â€¢ Dari ${tx.source}`;
       }
 
       return `
@@ -809,7 +809,7 @@ async function viewDashboard() {
             <div class="category-dot dot-${dotClass}"></div>
             <div class="tx-details">
               <p class="tx-desc" style="font-size: 13px;">${tx.description}</p>
-              <p class="tx-meta">${tx.dayName}, ${parseInt(tx.date.split('-')[2])} ${MONTH_NAMES[currentMonth - 1]} • ${subtitle}</p>
+              <p class="tx-meta">${tx.dayName}, ${parseInt(tx.date.split('-')[2])} ${MONTH_NAMES[currentMonth - 1]} â€¢ ${subtitle}</p>
             </div>
           </div>
           <span class="tx-amount ${typeClass}" style="font-size: 13px; font-weight: 600;">${sign}${formatRupiah(tx.amount)}</span>
@@ -1162,9 +1162,9 @@ function viewInputHarian() {
         <div class="card" style="position: sticky; top: 80px;">
           <!-- Segmented Transaction Type Toggle -->
           <div class="tx-type-toggle">
-            <button type="button" class="type-btn active expense" id="type-btn-expense" data-type="expense">🔴 Pengeluaran</button>
-            <button type="button" class="type-btn" id="type-btn-income" data-type="income">🟢 Pemasukan</button>
-            <button type="button" class="type-btn" id="type-btn-transfer" data-type="transfer">🔄 Transfer</button>
+            <button type="button" class="type-btn active expense" id="type-btn-expense" data-type="expense">ðŸ”´ Pengeluaran</button>
+            <button type="button" class="type-btn" id="type-btn-income" data-type="income">ðŸŸ¢ Pemasukan</button>
+            <button type="button" class="type-btn" id="type-btn-transfer" data-type="transfer">ðŸ”„ Transfer</button>
           </div>
 
           <form id="expense-form" class="space-y-4" style="margin-top: 16px;">
@@ -1534,15 +1534,15 @@ async function renderExpensesList() {
         typeClass = 'income';
         sign = '+';
         dotClass = 'income-dot';
-        detailsMeta = `${entry.incomeCategory || 'Pemasukan'} • Ke ${entry.source}`;
+        detailsMeta = `${entry.incomeCategory || 'Pemasukan'} â€¢ Ke ${entry.source}`;
       } else if (entry.type === 'transfer') {
         typeClass = 'transfer';
         sign = '';
         dotClass = 'transfer-dot';
         const to = entry.transferTo || (entry.source === 'Dompet' ? 'ATM' : 'Dompet');
-        detailsMeta = `Transfer • ${entry.source} → ${to}`;
+        detailsMeta = `Transfer â€¢ ${entry.source} â†’ ${to}`;
       } else {
-        detailsMeta = `${entry.category} • Dari ${entry.source}`;
+        detailsMeta = `${entry.category} â€¢ Dari ${entry.source}`;
       }
 
       return `
@@ -2570,19 +2570,19 @@ async function postRenderPengaturan() {
     }, 2000);
   });
 
-  // Reset database handler — deletes all Supabase data for current user
+  // Reset database handler â€” deletes all Supabase data for current user
   resetBtn?.addEventListener('click', async () => {
     if (confirm('Apakah Anda yakin ingin mereset semua data pengeluaran? Tindakan ini tidak dapat dibatalkan.')) {
-      await supabase.from('transactions').delete().eq('user_id', currentUserId);
-      await supabase.from('budgets').delete().eq('user_id', currentUserId);
-      await supabase.from('balances').delete().eq('user_id', currentUserId);
+      await supabaseClient.from('transactions').delete().eq('user_id', currentUserId);
+      await supabaseClient.from('budgets').delete().eq('user_id', currentUserId);
+      await supabaseClient.from('balances').delete().eq('user_id', currentUserId);
 
       await setView('dashboard');
     }
   });
 }
 
-// --- ONE-TIME MIGRATION: localStorage → Supabase ---
+// --- ONE-TIME MIGRATION: localStorage â†’ Supabase ---
 async function runMigration() {
   const oldExpenses = localStorage.getItem(STORAGE_KEY);
   const oldBudgets  = localStorage.getItem(BUDGET_KEY);
@@ -2594,7 +2594,7 @@ async function runMigration() {
 
   // Migrate transactions
   try {
-    const { count: txCount } = await supabase
+    const { count: txCount } = await supabaseClient
       .from('transactions')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', currentUserId);
@@ -2615,7 +2615,7 @@ async function runMigration() {
           transfer_to:     e.transferTo     || null,
           income_category: e.incomeCategory || null,
         }));
-        const { error } = await supabase.from('transactions').insert(rows);
+        const { error } = await supabaseClient.from('transactions').insert(rows);
         if (error) throw error;
       }
       localStorage.removeItem(STORAGE_KEY);
@@ -2627,7 +2627,7 @@ async function runMigration() {
 
   // Migrate budgets
   try {
-    const { count: budgetCount } = await supabase
+    const { count: budgetCount } = await supabaseClient
       .from('budgets')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', currentUserId);
@@ -2644,7 +2644,7 @@ async function runMigration() {
         categories:   b.categories,
         total_budget: b.totalBudget || 0,
       }));
-      const { error } = await supabase.from('budgets').insert(rows);
+      const { error } = await supabaseClient.from('budgets').insert(rows);
       if (error) throw error;
       localStorage.removeItem(BUDGET_KEY);
     }
@@ -2655,14 +2655,14 @@ async function runMigration() {
 
   // Migrate balance
   try {
-    const { count: balanceCount } = await supabase
+    const { count: balanceCount } = await supabaseClient
       .from('balances')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', currentUserId);
 
     if (oldBalance && balanceCount === 0) {
       const parsed = JSON.parse(oldBalance);
-      const { error } = await supabase.from('balances').insert({
+      const { error } = await supabaseClient.from('balances').insert({
         user_id:        currentUserId,
         initial_dompet: parsed.initialDompet || 0,
         initial_atm:    parsed.initialATM    || 0,
@@ -2683,7 +2683,7 @@ async function runMigration() {
 
 // --- CORE SHELL ACTIONS & NAVIGATION ---
 document.addEventListener('DOMContentLoaded', async () => {
-  // 1. Apply theme FIRST — before any await, to avoid flash
+  // 1. Apply theme FIRST â€” before any await, to avoid flash
   const savedTheme = localStorage.getItem('theme') || 'light';
   document.documentElement.setAttribute('data-theme', savedTheme);
 
@@ -2696,7 +2696,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   updateThemeIcon(savedTheme);
 
-  // 2. Sidebar + mobile setup (sync — no storage needed)
+  // 2. Sidebar + mobile setup (sync â€” no storage needed)
   const sidebar = document.getElementById('sidebar');
   const collapseBtn = document.getElementById('sidebar-collapse-btn');
   const collapseIcon = document.getElementById('collapse-icon');
@@ -2765,8 +2765,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  // 6. Auth state listener — handles login, logout, session restore
-  supabase.auth.onAuthStateChange(async (event, session) => {
+  // 6. Auth state listener â€” handles login, logout, session restore
+  supabaseClient.auth.onAuthStateChange(async (event, session) => {
     if (event === 'SIGNED_IN' && session) {
       currentUserId = session.user.id;
       hideAuthScreen();
@@ -2779,7 +2779,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // 7. Check for existing session (page refresh / returning user)
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { session } } = await supabaseClient.auth.getSession();
   if (session) {
     currentUserId = session.user.id;
     hideAuthScreen();
@@ -2807,12 +2807,12 @@ async function exportToExcel(year, month) {
   aoa_cover[4][1] = "Catat setiap transaksi harian (pengeluaran, pemasukan, dan transfer saldo) untuk memantau saldo Dompet & ATM secara real-time."; // B5
 
   aoa_cover[8][1] = "Fitur Utama:"; // B9
-  aoa_cover[9][1] = "✓ Pencatatan multi-tipe (Pengeluaran, Pemasukan, Transfer)"; // B10
-  aoa_cover[10][1] = "✓ Pemantauan saldo Dompet & ATM secara otomatis"; // B11
-  aoa_cover[11][1] = "✓ Rekap pengeluaran harian & analisis kategori"; // B12
-  aoa_cover[12][1] = "✓ Laporan Arus Kas (Cash Flow) bulanan"; // B13
-  aoa_cover[13][1] = "✓ Grafik trend pengeluaran bulanan"; // B14
-  aoa_cover[14][1] = "✓ Perbandingan budget vs pengeluaran aktual"; // B15
+  aoa_cover[9][1] = "âœ“ Pencatatan multi-tipe (Pengeluaran, Pemasukan, Transfer)"; // B10
+  aoa_cover[10][1] = "âœ“ Pemantauan saldo Dompet & ATM secara otomatis"; // B11
+  aoa_cover[11][1] = "âœ“ Rekap pengeluaran harian & analisis kategori"; // B12
+  aoa_cover[12][1] = "âœ“ Laporan Arus Kas (Cash Flow) bulanan"; // B13
+  aoa_cover[13][1] = "âœ“ Grafik trend pengeluaran bulanan"; // B14
+  aoa_cover[14][1] = "âœ“ Perbandingan budget vs pengeluaran aktual"; // B15
 
   aoa_cover[17][1] = "Daftar Sheet:"; // B18
   aoa_cover[17][2] = "Deskripsi"; // C18
@@ -3241,3 +3241,7 @@ async function exportToExcel(year, month) {
   // 8. WRITE FILE & DOWNLOAD
   XLSX.writeFile(wb, `${monthName} Tracker Managemen.xlsx`);
 }
+
+
+
+
