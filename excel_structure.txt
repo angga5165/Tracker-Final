@@ -1,0 +1,148 @@
+=== Sheet: Cover ===
+Dimensions: B2:H30
+
+Row: B2: DAILY EXPENSE TRACKER
+Row: B3: Pencatatan Pengeluaran Harian - Mei 2026
+Row: B5: Catat setiap pengeluaran harian Anda untuk memantau keuangan dengan lebih detail. Setiap transaksi tercatat dengan tanggal, kategori, dan jumlah.
+Row: B9: Fitur Utama:
+Row: B10: ✓ Input pengeluaran harian per tanggal
+Row: B11: ✓ Kategorisasi otomatis (Makanan, Transportasi, dll)
+Row: B12: ✓ Total harian & bulanan otomatis
+Row: B13: ✓ Analisis pengeluaran per kategori
+Row: B14: ✓ Grafik trend harian dan breakdown kategori
+Row: B15: ✓ Highlight akhir pekan untuk perencanaan
+Row: B17: Daftar Sheet:
+Row: B18: Sheet, C18: Deskripsi
+Row: B19: Cover, C19: Halaman utama dan informasi
+Row: B20: Input Harian, C20: Input pengeluaran harian per tanggal & kategori
+Row: B21: Rekap Harian, C21: Ringkasan total pengeluaran per hari
+Row: B22: Analisis Kategori, C22: Breakdown pengeluaran per kategori
+Row: B23: Grafik, C23: Visualisasi data pengeluaran
+Row: B25: Tips Penggunaan:
+Row: B26: 1. Buka sheet 'Input Harian' dan masukkan setiap pengeluaran
+Row: B27: 2. Pilih kategori dari dropdown yang tersedia
+Row: B28: 3. Cek 'Rekap Harian' untuk total per hari
+Row: B29: 4. Lihat 'Analisis Kategori' untuk breakdown
+Row: B30: 5. Pantau grafik untuk trend pengeluaran
+
+==================================================
+
+=== Sheet: Input Harian ===
+Dimensions: B2:G106
+
+Row: B2: INPUT PENGELUARAN HARIAN - APRIL 2026
+Row: B4: Tanggal, C4: Hari, D4: Kategori, E4: Keterangan, F4: Jumlah (Rp), G4: Total Harian
+Row: B5: 12.0, C5: Selasa, D5: Lainnya, E5: Parkir UIN, F5: 1000.0, G5: =SUM(F5:F9)
+Row: D6: Makanan, E6: Nasi Ayam, F6: 13000.0
+Row: D7: Makanan, E7: Telor Gulung, F7: 5000.0
+Row: D8: Transportasi, E8: Bensin Migi, F8: 22000.0
+Row: B10: 13.0, C10: Rabu, D10: Makanan, E10: Nasi Kuning + Nasi Ayam +Warteg, F10: 41000.0, G10: =SUM(F10:F14)
+Row: D11: Makanan, E11: Kopi + Pulpy Orange, F11: 18000.0
+Row: D12: Makanan, E12: C1000, F12: 8000.0
+Row: D13: Lainnya, E13: Parkir UIN + PONRAN, F13: 7000.0
+Row: D14: Transportasi, E14: Bensin, F14: 22000.0
+Row: B15: 14.0, C15: Kamis, D15: Makanan, E15: Nasi Kuning, F15: 12000.0, G15: =SUM(F15:F19)
+Row: D16: Transportasi, E16: Bensin, F16: 15000.0
+Row: D17: Lainnya, E17: Parkir Blok M, F17: 6000.0
+Row: B20: 15.0, C20: Jumat, G20: =SUM(F20:F24)
+Row: B25: 16.0, C25: Sabtu, G25: =SUM(F25:F29)
+Row: B30: 17.0, C30: Minggu, D30: Makanan, E30: Gacoan, F30: 27000.0, G30: =SUM(F30:F34)
+Row: B35: 18.0, C35: Senin, D35: Makanan, E35: Bubur Ayam, F35: 12000.0, G35: =SUM(F35:F39)
+Row: B40: 19.0, C40: Selasa, D40: Transportasi, E40: Bensin, F40: 20000.0, G40: =SUM(F40:F44)
+Row: D41: Hiburan, E41: Kue, F41: 32500.0
+Row: D42: Hiburan, E42: Lukis-Lukis, F42: 6000.0
+Row: D43: Makanan, E43: Nasi Ayam + VIT + Susu, F43: 50000.0
+Row: D44: Lainnya, E44: Parkir, F44: 6000.0
+Row: B45: 20.0, C45: Rabu, D45: Makanan, E45: Nasi Ayam, F45: 15000.0, G45: =SUM(F45:F49)
+Row: D46: Transportasi, E46: Bensin, F46: 20000.0
+Row: D47: Lainnya, E47: Uin Kelawai, F47: 4000.0
+Row: D48: Makanan, E48: Nasi Ayam Popcorn, F48: 20000.0
+Row: D49: Belanja, E49: Gunting Kuku, F49: 9000.0
+Row: B50: 21.0, C50: Kamis, G50: =SUM(F50:F54)
+Row: B55: 22.0, C55: Jumat, D55: Transportasi, E55: Bensin , F55: 10000.0, G55: =SUM(F55:F59)
+Row: D56: Makanan, E56: Nasi Ayam, F56: 15000.0
+Row: D57: Lainnya, E57: Parkir, F57: 2000.0
+Row: B60: 23.0, C60: Sabtu, D60: Makanan, E60: Good Day, F60: 4000.0, G60: =SUM(F60:F64)
+Row: B65: 24.0, C65: Minggu, D65: Transportasi, E65: Bensin, F65: 20000.0, G65: =SUM(F65:F69)
+Row: D66: Makanan, E66: kopi dan susu, nasi ayam, F66: 27000.0
+Row: D67: Lainnya, E67: parkir, F67: 4000.0
+Row: D68: Makanan, E68: silverqueen, F68: 20000.0
+Row: B70: 25.0, C70: Senin, D70: Makanan, E70: Nasi Ayam, F70: 35000.0, G70: =SUM(F70:F74)
+Row: D71: Transportasi, E71: Bensin, F71: 10000.0
+Row: D72: Lainnya, E72: parkir, F72: 4000.0
+Row: B75: 26.0, C75: Selasa, D75: Makanan, E75: Nasi Ayam, F75: 15000.0, G75: =SUM(F75:F79)
+Row: D76: Transportasi, E76: Bensin, F76: 10000.0
+Row: D77: Lainnya, E77: Mila, F77: 50000.0
+Row: D78: Makanan, E78: es teh, F78: 10000.0
+Row: B80: 27.0, C80: Rabu, G80: =SUM(F80:F84)
+Row: B85: 28.0, C85: Kamis, G85: =SUM(F85:F89)
+Row: B90: 29.0, C90: Jumat, G90: =SUM(F90:F94)
+Row: B95: 30.0, C95: Sabtu, G95: =SUM(F95:F99)
+Row: B100: 31.0, C100: Minggu, D100: Transportasi, E100: Bensin, F100: 20000.0, G100: =SUM(F100:F104)
+Row: B106: TOTAL BULANAN, F106: =SUM(F5:F104)
+
+==================================================
+
+=== Sheet: Rekap Harian ===
+Dimensions: B2:J26
+
+Row: B2: REKAP PENGELUARAN HARIAN - Mei 2026
+Row: B4: Tanggal, C4: Hari, D4: Makanan, E4: Transportasi, F4: Belanja, G4: Hiburan, H4: Tagihan, I4: Lainnya, J4: Total Harian
+Row: B5: 12.0, C5: Selasa, D5: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F834EBA0>, E5: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F830A850>, F5: =SUMIFS('Input Harian'!$F$5:$F$104,'Input Harian'!$B$5:$B$104,B5,'Input Harian'!$D$5:$D$104,"Belanja"), G5: =SUMIFS('Input Harian'!$F$5:$F$104,'Input Harian'!$B$5:$B$104,B5,'Input Harian'!$D$5:$D$104,"Hiburan"), H5: =SUMIFS('Input Harian'!$F$5:$F$104,'Input Harian'!$B$5:$B$104,B5,'Input Harian'!$D$5:$D$104,"Tagihan (Listrik/Air/Internet)"), I5: =SUMIFS('Input Harian'!$F$5:$F$104,'Input Harian'!$B$5:$B$104,B5,'Input Harian'!$D$5:$D$104,"Lainnya"), J5: =SUM(D5:I5)
+Row: B6: 13.0, C6: Rabu, D6: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F830B9D0>, E6: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F82476F0>, F6: =SUMIFS('Input Harian'!$F$5:$F$104,'Input Harian'!$B$5:$B$104,B6,'Input Harian'!$D$5:$D$104,"Belanja"), G6: =SUMIFS('Input Harian'!$F$5:$F$104,'Input Harian'!$B$5:$B$104,B6,'Input Harian'!$D$5:$D$104,"Hiburan"), H6: =SUMIFS('Input Harian'!$F$5:$F$104,'Input Harian'!$B$5:$B$104,B6,'Input Harian'!$D$5:$D$104,"Tagihan (Listrik/Air/Internet)"), I6: =SUMIFS('Input Harian'!$F$5:$F$104,'Input Harian'!$B$5:$B$104,B6,'Input Harian'!$D$5:$D$104,"Lainnya"), J6: =SUM(D6:I6)
+Row: B7: 14.0, C7: Kamis, D7: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F8410D60>, E7: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F831D250>, F7: =SUMIFS('Input Harian'!$F$5:$F$104,'Input Harian'!$B$5:$B$104,B7,'Input Harian'!$D$5:$D$104,"Belanja"), G7: =SUMIFS('Input Harian'!$F$5:$F$104,'Input Harian'!$B$5:$B$104,B7,'Input Harian'!$D$5:$D$104,"Hiburan"), H7: =SUMIFS('Input Harian'!$F$5:$F$104,'Input Harian'!$B$5:$B$104,B7,'Input Harian'!$D$5:$D$104,"Tagihan (Listrik/Air/Internet)"), I7: =SUMIFS('Input Harian'!$F$5:$F$104,'Input Harian'!$B$5:$B$104,B7,'Input Harian'!$D$5:$D$104,"Lainnya"), J7: =SUM(D7:I7)
+Row: B8: 15.0, C8: Jumat, D8: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F82E2E00>, E8: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F82E2F10>, F8: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F8325250>, G8: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F8325950>, H8: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F82E5C70>, I8: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F82E5F40>, J8: =SUM(D8:I8)
+Row: B9: 16.0, C9: Sabtu, D9: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F844C2F0>, E9: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F844C210>, F9: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F833B110>, G9: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F836C950>, H9: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F836CB90>, I9: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F8354680>, J9: =SUM(D9:I9)
+Row: B10: 17.0, C10: Minggu, D10: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F8354CB0>, E10: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F833CE10>, F10: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F833CEB0>, G10: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F84924E0>, H10: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F835D850>, I10: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F835D7D0>, J10: =SUM(D10:I10)
+Row: B11: 18.0, C11: Senin, D11: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F83831C0>, E11: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F8383700>, F11: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F8369610>, G11: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F83695B0>, H11: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F8369550>, I11: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F83694F0>, J11: =SUM(D11:I11)
+Row: B12: 19.0, C12: Selasa, D12: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F8369490>, E12: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F8369430>, F12: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F83693D0>, G12: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F8369370>, H12: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F8369310>, I12: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F83692B0>, J12: =SUM(D12:I12)
+Row: B13: 20.0, C13: Rabu, D13: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F8369250>, E13: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F83691F0>, F13: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F8369190>, G13: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F83699D0>, H13: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F8369130>, I13: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F83690D0>, J13: =SUM(D13:I13)
+Row: B14: 21.0, C14: Kamis, D14: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F8369970>, E14: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F8369A30>, F14: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F8369A90>, G14: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F8369AF0>, H14: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F8369B50>, I14: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F8369BB0>, J14: =SUM(D14:I14)
+Row: B15: 22.0, C15: Jumat, D15: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F8369C10>, E15: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F8369C70>, F15: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F8369CD0>, G15: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F8369D30>, H15: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F8369D90>, I15: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F8369670>, J15: =SUM(D15:I15)
+Row: B16: 23.0, C16: Sabtu, D16: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F83696D0>, E16: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F8369730>, F16: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F8369910>, G16: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F83698B0>, H16: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F8369850>, I16: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F83697F0>, J16: =SUM(D16:I16)
+Row: B17: 24.0, C17: Minggu, D17: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F8369790>, E17: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F8369DF0>, F17: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F8369E50>, G17: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F8369EB0>, H17: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F8369F10>, I17: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F8369F70>, J17: =SUM(D17:I17)
+Row: B18: 25.0, C18: Senin, D18: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F8369FD0>, E18: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F836A030>, F18: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F836A090>, G18: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F836A0F0>, H18: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F836A150>, I18: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F836A1B0>, J18: =SUM(D18:I18)
+Row: B19: 26.0, C19: Selasa, D19: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F836A210>, E19: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F836A270>, F19: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F836A2D0>, G19: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F836A330>, H19: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F836A390>, I19: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F836A3F0>, J19: =SUM(D19:I19)
+Row: B20: 27.0, C20: Rabu, D20: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F836A450>, E20: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F836A4B0>, F20: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F836A510>, G20: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F836A570>, H20: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F836A5D0>, I20: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F836A630>, J20: =SUM(D20:I20)
+Row: B21: 28.0, C21: Kamis, D21: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F836A690>, E21: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F836A6F0>, F21: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F836A750>, G21: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F836A7B0>, H21: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F836A810>, I21: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F836A870>, J21: =SUM(D21:I21)
+Row: B22: 29.0, C22: Jumat, D22: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F836A8D0>, E22: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F836A930>, F22: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F836A990>, G22: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F836A9F0>, H22: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F836AA50>, I22: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F836AAB0>, J22: =SUM(D22:I22)
+Row: B23: 30.0, C23: Sabtu, D23: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F836AB10>, E23: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F836AB70>, F23: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F836ABD0>, G23: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F836AC30>, H23: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F836AC90>, I23: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F836ACF0>, J23: =SUM(D23:I23)
+Row: B24: 31.0, C24: Minggu, D24: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F836AD50>, E24: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F836ADB0>, F24: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F836AE10>, G24: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F836AE70>, H24: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F836AED0>, I24: <openpyxl.worksheet.formula.ArrayFormula object at 0x000001B2F836AF30>, J24: =SUM(D24:I24)
+Row: B25: TOTAL, D25: =SUM(D5:D24), E25: =SUM(E5:E24), F25: =SUM(F5:F24), G25: =SUM(G5:G24), H25: =SUM(H5:H24), I25: =SUM(I5:I24), J25: =SUM(J5:J24)
+Row: B26: RATA-RATA/HARI, D26: =D25/20, E26: =E25/20, F26: =F25/20, G26: =G25/20, H26: =H25/20, I26: =I25/20, J26: =J25/20
+
+==================================================
+
+=== Sheet: Analisis Kategori ===
+Dimensions: B2:F22
+
+Row: B2: ANALISIS PENGELUARAN PER KATEGORI - APRIL 2026
+Row: B4: Kategori, C4: Total (Rp), D4: % dari Total, E4: Rata-rata/Hari, F4: Transaksi
+Row: B5: Makanan, C5: ='Rekap Harian'!D25, D5: =IF($C$11=0,0,C5/$C$11), E5: =C5/18, F5: =COUNTIFS('Input Harian'!$D$5:$D$104,"Makanan",'Input Harian'!$F$5:$F$104,">0")
+Row: B6: Transportasi, C6: ='Rekap Harian'!E25, D6: =IF($C$11=0,0,C6/$C$11), E6: =C6/18, F6: =COUNTIFS('Input Harian'!$D$5:$D$104,"Transportasi",'Input Harian'!$F$5:$F$104,">0")
+Row: B7: Belanja, C7: ='Rekap Harian'!F25, D7: =IF($C$11=0,0,C7/$C$11), E7: =C7/30, F7: =COUNTIFS('Input Harian'!$D$5:$D$104,"Belanja",'Input Harian'!$F$5:$F$104,">0")
+Row: B8: Hiburan, C8: ='Rekap Harian'!G25, D8: =IF($C$11=0,0,C8/$C$11), E8: =C8/30, F8: =COUNTIFS('Input Harian'!$D$5:$D$104,"Hiburan",'Input Harian'!$F$5:$F$104,">0")
+Row: B9: Tagihan (Listrik/Air/Internet), C9: ='Rekap Harian'!H25, D9: =IF($C$11=0,0,C9/$C$11), E9: =C9/30, F9: =COUNTIFS('Input Harian'!$D$5:$D$104,"Tagihan (Listrik/Air/Internet)",'Input Harian'!$F$5:$F$104,">0")
+Row: B10: Lainnya, C10: ='Rekap Harian'!I25, D10: =IF($C$11=0,0,C10/$C$11), E10: =C10/30, F10: =COUNTIFS('Input Harian'!$D$5:$D$104,"Lainnya",'Input Harian'!$F$5:$F$104,">0")
+Row: B11: TOTAL, C11: =SUM(C5:C10), D11: 100.0%, E11: =SUM(E5:E10), F11: =SUM(F5:F10)
+Row: B14: BUDGET vs AKTUAL
+Row: B15: Kategori, C15: Budget (Rp), D15: Aktual (Rp), E15: Selisih (Rp), F15: % Tercapai
+Row: B16: Makanan, C16: 300000.0, D16: =C5, E16: =C16-D16, F16: =IF(C16=0,0,D16/C16)
+Row: B17: Transportasi, C17: 300000.0, D17: =C6, E17: =C17-D17, F17: =IF(C17=0,0,D17/C17)
+Row: B18: Belanja, C18: 0.0, D18: =C7, E18: =C18-D18, F18: =IF(C18=0,0,D18/C18)
+Row: B19: Hiburan, C19: 100000.0, D19: =C8, E19: =C19-D19, F19: =IF(C19=0,0,D19/C19)
+Row: B20: Tagihan (Listrik/Air/Internet), C20: 0.0, D20: =C9, E20: =C20-D20, F20: =IF(C20=0,0,D20/C20)
+Row: B21: Lainnya, C21: 20000.0, D21: =C10, E21: =C21-D21, F21: =IF(C21=0,0,D21/C21)
+Row: B22: TOTAL, C22: =SUM(C16:C21), D22: =SUM(D16:D21), E22: =SUM(E16:E21), F22: =SUM(F16:F21)
+
+==================================================
+
+=== Sheet: Grafik ===
+Dimensions: B2:V26
+
+Row: B2: VISUALISASI PENGELUARAN - APRIL 2026
+Row: B4: Visual 1, N4: Visual 2
+Row: B26: Visual 3
+
+==================================================
+
