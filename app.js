@@ -1162,9 +1162,9 @@ function viewInputHarian() {
         <div class="card" style="position: sticky; top: 80px;">
           <!-- Segmented Transaction Type Toggle -->
           <div class="tx-type-toggle">
-            <button type="button" class="type-btn active expense" id="type-btn-expense" data-type="expense">ðŸ”´ Pengeluaran</button>
-            <button type="button" class="type-btn" id="type-btn-income" data-type="income">ðŸŸ¢ Pemasukan</button>
-            <button type="button" class="type-btn" id="type-btn-transfer" data-type="transfer">ðŸ”„ Transfer</button>
+            <button type="button" class="type-btn active expense" id="type-btn-expense" data-type="expense">🔴 Pengeluaran</button>
+            <button type="button" class="type-btn" id="type-btn-income" data-type="income">🟢 Pemasukan</button>
+            <button type="button" class="type-btn" id="type-btn-transfer" data-type="transfer">🔄 Transfer</button>
           </div>
 
           <form id="expense-form" class="space-y-4" style="margin-top: 16px;">
