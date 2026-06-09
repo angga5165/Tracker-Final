@@ -792,15 +792,15 @@ async function viewDashboard() {
         typeClass = 'income';
         sign = '+';
         dotClass = 'income-dot';
-        subtitle = `${tx.incomeCategory || 'Pemasukan'} â€¢ Ke ${tx.source}`;
+        subtitle = `${tx.incomeCategory || 'Pemasukan'} • Ke ${tx.source}`;
       } else if (tx.type === 'transfer') {
         typeClass = 'transfer';
         sign = '';
         dotClass = 'transfer-dot';
         const to = tx.transferTo || (tx.source === 'Dompet' ? 'ATM' : 'Dompet');
-        subtitle = `Transfer â€¢ ${tx.source} â†’ ${to}`;
+        subtitle = `Transfer • ${tx.source} â†’ ${to}`;
       } else {
-        subtitle = `${tx.category || 'Lainnya'} â€¢ Dari ${tx.source}`;
+        subtitle = `${tx.category || 'Lainnya'} • Dari ${tx.source}`;
       }
 
       return `
@@ -809,7 +809,7 @@ async function viewDashboard() {
             <div class="category-dot dot-${dotClass}"></div>
             <div class="tx-details">
               <p class="tx-desc" style="font-size: 13px;">${tx.description}</p>
-              <p class="tx-meta">${tx.dayName}, ${parseInt(tx.date.split('-')[2])} ${MONTH_NAMES[currentMonth - 1]} â€¢ ${subtitle}</p>
+              <p class="tx-meta">${tx.dayName}, ${parseInt(tx.date.split('-')[2])} ${MONTH_NAMES[currentMonth - 1]} • ${subtitle}</p>
             </div>
           </div>
           <span class="tx-amount ${typeClass}" style="font-size: 13px; font-weight: 600;">${sign}${formatRupiah(tx.amount)}</span>
@@ -1534,15 +1534,15 @@ async function renderExpensesList() {
         typeClass = 'income';
         sign = '+';
         dotClass = 'income-dot';
-        detailsMeta = `${entry.incomeCategory || 'Pemasukan'} â€¢ Ke ${entry.source}`;
+        detailsMeta = `${entry.incomeCategory || 'Pemasukan'} • Ke ${entry.source}`;
       } else if (entry.type === 'transfer') {
         typeClass = 'transfer';
         sign = '';
         dotClass = 'transfer-dot';
         const to = entry.transferTo || (entry.source === 'Dompet' ? 'ATM' : 'Dompet');
-        detailsMeta = `Transfer â€¢ ${entry.source} â†’ ${to}`;
+        detailsMeta = `Transfer • ${entry.source} â†’ ${to}`;
       } else {
-        detailsMeta = `${entry.category} â€¢ Dari ${entry.source}`;
+        detailsMeta = `${entry.category} • Dari ${entry.source}`;
       }
 
       return `
