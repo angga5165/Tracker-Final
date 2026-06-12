@@ -1,4 +1,4 @@
-﻿// --- DATABASE & STATE MANAGEMENT ---
+// --- DATABASE & STATE MANAGEMENT ---
 const STORAGE_KEY = 'expense-tracker-data';
 const BUDGET_KEY = 'expense-tracker-budget';
 const BALANCE_KEY = 'expense-tracker-balance';
@@ -233,14 +233,7 @@ async function loadExpenses() {
 
     // New user with no data â€” seed with SAMPLE_DATA
     if (updated.length === 0) {
-      const entries = SAMPLE_DATA.map(item => ({
-        ...item,
-        id:     generateId(),
-        type:   'expense',
-        source: 'Dompet',
-      }));
-      await saveExpenses(entries);
-      return entries;
+      return [];
     }
 
     return updated;
