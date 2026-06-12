@@ -348,7 +348,6 @@ async function deleteExpense(id) {
     return count > 0;
   } catch (e) {
     console.error('[deleteExpense]', e);
-    return false;
   }
 }
 
@@ -367,14 +366,16 @@ async function loadBalance() {
       return {
         initialDompet: data.initial_dompet,
         initialATM:    data.initial_atm,
+        initialEWallet: data.initial_ewallet || 0,
         initialDate:   data.initial_date,
       };
     }
 
-    // No row exists â€” create default and return it
+    // No row exists — create default and return it
     const defaultBalance = {
       initialDompet: 0,
       initialATM:    0,
+      initialEWallet: 0,
       initialDate:   '2026-05-01',
     };
     await saveBalance(defaultBalance);
@@ -384,6 +385,7 @@ async function loadBalance() {
     return {
       initialDompet: 0,
       initialATM:    0,
+      initialEWallet: 0,
       initialDate:   '2026-05-01',
     };
   }
@@ -397,6 +399,7 @@ async function saveBalance(balanceData) {
         user_id:        currentUserId,
         initial_dompet: balanceData.initialDompet,
         initial_atm:    balanceData.initialATM,
+        initial_ewallet: balanceData.initialEWallet || 0,
         initial_date:   balanceData.initialDate,
         updated_at:     new Date().toISOString(),
       }, { onConflict: 'user_id' });
@@ -413,35 +416,49 @@ async function calculateCurrentBalance() {
 
   let dompet = initial.initialDompet;
   let atm = initial.initialATM;
+  let ewallet = initial.initialEWallet || 0;
 
   expenses.forEach(e => {
     const amt = e.amount || 0;
     if (e.type === 'expense') {
       if (e.source === 'ATM') {
         atm -= amt;
+      } else if (e.source === 'E-Wallet') {
+        ewallet -= amt;
       } else {
         dompet -= amt;
       }
     } else if (e.type === 'income') {
       if (e.source === 'ATM') {
         atm += amt;
+      } else if (e.source === 'E-Wallet') {
+        ewallet += amt;
       } else {
         dompet += amt;
       }
     } else if (e.type === 'transfer') {
       const from = e.source;
       const to = e.transferTo || (from === 'Dompet' ? 'ATM' : 'Dompet');
-      if (from === 'Dompet' && to === 'ATM') {
-        dompet -= amt;
-        atm += amt;
-      } else if (from === 'ATM' && to === 'Dompet') {
+      // Deduct from source
+      if (from === 'ATM') {
         atm -= amt;
+      } else if (from === 'E-Wallet') {
+        ewallet -= amt;
+      } else {
+        dompet -= amt;
+      }
+      // Add to destination
+      if (to === 'ATM') {
+        atm += amt;
+      } else if (to === 'E-Wallet') {
+        ewallet += amt;
+      } else {
         dompet += amt;
       }
     }
   });
 
-  return { dompet, atm, total: dompet + atm };
+  return { dompet, atm, ewallet, total: dompet + atm + ewallet };
 }
 
 async function loadBudgets() {
@@ -820,7 +837,7 @@ async function viewDashboard() {
     </div>
 
     <!-- Balance Overview Cards -->
-    <div class="grid-3" style="margin-bottom: 24px;">
+    <div class="grid-4" style="margin-bottom: 24px;">
       <div class="balance-card dompet">
         <div class="balance-card-header">
           <span class="balance-card-title">Dompet (Tunai)</span>
@@ -839,6 +856,16 @@ async function viewDashboard() {
           </div>
         </div>
         <p class="balance-card-value">${formatRupiah(balance.atm)}</p>
+      </div>
+
+      <div class="balance-card ewallet">
+        <div class="balance-card-header">
+          <span class="balance-card-title">E-Wallet (Digital)</span>
+          <div class="balance-card-icon-box">
+            <i data-lucide="smartphone"></i>
+          </div>
+        </div>
+        <p class="balance-card-value">${formatRupiah(balance.ewallet)}</p>
       </div>
 
       <div class="balance-card total">
@@ -1200,6 +1227,7 @@ function viewInputHarian() {
               <select id="form-source" class="form-select">
                 <option value="Dompet">Dompet (Tunai)</option>
                 <option value="ATM">ATM (Rekening)</option>
+                <option value="E-Wallet">E-Wallet (Digital)</option>
               </select>
             </div>
 
@@ -1209,6 +1237,7 @@ function viewInputHarian() {
               <select id="form-transfer-to" class="form-select">
                 <option value="ATM" selected>ATM (Rekening)</option>
                 <option value="Dompet">Dompet (Tunai)</option>
+                <option value="E-Wallet">E-Wallet (Digital)</option>
               </select>
             </div>
 
@@ -1313,7 +1342,13 @@ async function postRenderInputHarian() {
         }
         // Auto sync so they are not the same
         if (sourceSelect && transferToSelect && sourceSelect.value === transferToSelect.value) {
-          transferToSelect.value = sourceSelect.value === 'Dompet' ? 'ATM' : 'Dompet';
+          if (sourceSelect.value === 'Dompet') {
+            transferToSelect.value = 'ATM';
+          } else if (sourceSelect.value === 'ATM') {
+            transferToSelect.value = 'E-Wallet';
+          } else {
+            transferToSelect.value = 'ATM';
+          }
         }
       }
       lucide.createIcons();
@@ -1326,13 +1361,29 @@ async function postRenderInputHarian() {
   sourceSelect?.addEventListener('change', (e) => {
     const activeType = document.querySelector('.type-btn.active')?.getAttribute('data-type');
     if (activeType === 'transfer' && transferToSelect) {
-      transferToSelect.value = e.target.value === 'Dompet' ? 'ATM' : 'Dompet';
+      if (e.target.value === transferToSelect.value) {
+        if (e.target.value === 'Dompet') {
+          transferToSelect.value = 'ATM';
+        } else if (e.target.value === 'ATM') {
+          transferToSelect.value = 'E-Wallet';
+        } else {
+          transferToSelect.value = 'ATM';
+        }
+      }
     }
   });
   transferToSelect?.addEventListener('change', (e) => {
     const activeType = document.querySelector('.type-btn.active')?.getAttribute('data-type');
     if (activeType === 'transfer' && sourceSelect) {
-      sourceSelect.value = e.target.value === 'Dompet' ? 'ATM' : 'Dompet';
+      if (e.target.value === sourceSelect.value) {
+        if (e.target.value === 'Dompet') {
+          sourceSelect.value = 'ATM';
+        } else if (e.target.value === 'ATM') {
+          sourceSelect.value = 'E-Wallet';
+        } else {
+          sourceSelect.value = 'ATM';
+        }
+      }
     }
   });
 
@@ -2430,6 +2481,17 @@ async function viewPengaturan() {
             </div>
           </div>
 
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label class="form-label" style="display: flex; align-items: center; gap: 8px;">
+              <span class="category-dot dot-transfer-dot" style="background-color: #7A6B8A;"></span>
+              <span>Saldo E-Wallet Awal (Digital)</span>
+            </label>
+            <div class="input-container">
+              <span class="input-icon" style="font-size: 13px; font-weight: 500; font-family: monospace;">Rp</span>
+              <input type="text" id="initial-ewallet-input" class="form-input has-icon text-right" value="${balanceData.initialEWallet || 0}" inputmode="numeric">
+            </div>
+          </div>
+
           <div class="form-group" style="margin-bottom: 16px;">
             <label class="form-label">Tanggal Mulai Tracking</label>
             <div class="input-container">
@@ -2491,6 +2553,7 @@ async function postRenderPengaturan() {
   const saveBalanceBtn = document.getElementById('save-balance-btn');
   const dompetInput = document.getElementById('initial-dompet-input');
   const atmInput = document.getElementById('initial-atm-input');
+  const ewalletInput = document.getElementById('initial-ewallet-input');
   const dateInput = document.getElementById('initial-date-input');
 
   // Format initial balance inputs (digits only)
@@ -2500,16 +2563,21 @@ async function postRenderPengaturan() {
   atmInput?.addEventListener('input', (e) => {
     e.target.value = e.target.value.replace(/\D/g, '');
   });
+  ewalletInput?.addEventListener('input', (e) => {
+    e.target.value = e.target.value.replace(/\D/g, '');
+  });
 
   // Save balance handler
   saveBalanceBtn?.addEventListener('click', async () => {
     const dVal = parseInt(dompetInput.value.replace(/\D/g, '')) || 0;
     const aVal = parseInt(atmInput.value.replace(/\D/g, '')) || 0;
+    const eVal = parseInt(ewalletInput.value.replace(/\D/g, '')) || 0;
     const dateVal = dateInput.value || '2026-05-01';
 
     await saveBalance({
       initialDompet: dVal,
       initialATM: aVal,
+      initialEWallet: eVal,
       initialDate: dateVal
     });
 
@@ -2659,6 +2727,7 @@ async function runMigration() {
         user_id:        currentUserId,
         initial_dompet: parsed.initialDompet || 0,
         initial_atm:    parsed.initialATM    || 0,
+        initial_ewallet: parsed.initialEWallet || 0,
         initial_date:   parsed.initialDate   || '2026-05-01',
       });
       if (error) throw error;
@@ -3047,7 +3116,7 @@ async function exportToExcel(year, month) {
 
   // 6. SHEET 5: ARUS KAS (CASH FLOW & BALANCES)
   const aoa_cashflow = [];
-  for (let r = 0; r < 25; r++) {
+  for (let r = 0; r < 30; r++) {
     aoa_cashflow.push(Array(10).fill(""));
   }
 
@@ -3061,48 +3130,57 @@ async function exportToExcel(year, month) {
   aoa_cashflow[4][2] = balanceData.initialDompet; // C5
   aoa_cashflow[5][1] = "ATM (Rekening)"; // B6
   aoa_cashflow[5][2] = balanceData.initialATM; // C6
-  aoa_cashflow[6][1] = "TOTAL SALDO AWAL"; // B7
-  aoa_cashflow[6][2] = { f: "SUM(C5:C6)" }; // C7
+  aoa_cashflow[6][1] = "E-Wallet (Digital)"; // B7
+  aoa_cashflow[6][2] = balanceData.initialEWallet || 0; // C7
+  aoa_cashflow[7][1] = "TOTAL SALDO AWAL"; // B8
+  aoa_cashflow[7][2] = { f: "SUM(C5:C7)" }; // C8
 
   // Mutasi Bulan Ini Table
-  aoa_cashflow[8][1] = "2. ARUS KAS BULAN INI"; // B9
-  aoa_cashflow[9][1] = "Tipe Aliran"; // B10
-  aoa_cashflow[9][2] = "Dompet (Tunai)"; // C10
-  aoa_cashflow[9][3] = "ATM (Rekening)"; // D10
-  aoa_cashflow[9][4] = "Total Aliran"; // E10
+  aoa_cashflow[9][1] = "2. ARUS KAS BULAN INI"; // B10
+  aoa_cashflow[10][1] = "Tipe Aliran"; // B11
+  aoa_cashflow[10][2] = "Dompet (Tunai)"; // C11
+  aoa_cashflow[10][3] = "ATM (Rekening)"; // D11
+  aoa_cashflow[10][4] = "E-Wallet (Digital)"; // E11
+  aoa_cashflow[10][5] = "Total Aliran"; // F11
 
   // Pemasukan
-  aoa_cashflow[10][1] = "Total Pemasukan"; // B11
-  aoa_cashflow[10][2] = { f: `SUMIFS('Input Harian'!$H$5:$H$${inputEndRow},'Input Harian'!$D$5:$D$${inputEndRow},"Pemasukan",'Input Harian'!$E$5:$E$${inputEndRow},"Dompet")` }; // C11
-  aoa_cashflow[10][3] = { f: `SUMIFS('Input Harian'!$H$5:$H$${inputEndRow},'Input Harian'!$D$5:$D$${inputEndRow},"Pemasukan",'Input Harian'!$E$5:$E$${inputEndRow},"ATM")` }; // D11
-  aoa_cashflow[10][4] = { f: "SUM(C11:D11)" }; // E11
+  aoa_cashflow[11][1] = "Total Pemasukan"; // B12
+  aoa_cashflow[11][2] = { f: `SUMIFS('Input Harian'!$H$5:$H$${inputEndRow},'Input Harian'!$D$5:$D$${inputEndRow},"Pemasukan",'Input Harian'!$E$5:$E$${inputEndRow},"Dompet")` }; // C12
+  aoa_cashflow[11][3] = { f: `SUMIFS('Input Harian'!$H$5:$H$${inputEndRow},'Input Harian'!$D$5:$D$${inputEndRow},"Pemasukan",'Input Harian'!$E$5:$E$${inputEndRow},"ATM")` }; // D12
+  aoa_cashflow[11][4] = { f: `SUMIFS('Input Harian'!$H$5:$H$${inputEndRow},'Input Harian'!$D$5:$D$${inputEndRow},"Pemasukan",'Input Harian'!$E$5:$E$${inputEndRow},"E-Wallet")` }; // E12
+  aoa_cashflow[11][5] = { f: "SUM(C12:E12)" }; // F12
 
   // Pengeluaran
-  aoa_cashflow[11][1] = "Total Pengeluaran"; // B12
-  aoa_cashflow[11][2] = { f: `SUMIFS('Input Harian'!$H$5:$H$${inputEndRow},'Input Harian'!$D$5:$D$${inputEndRow},"Pengeluaran",'Input Harian'!$E$5:$E$${inputEndRow},"Dompet")` }; // C12
-  aoa_cashflow[11][3] = { f: `SUMIFS('Input Harian'!$H$5:$H$${inputEndRow},'Input Harian'!$D$5:$D$${inputEndRow},"Pengeluaran",'Input Harian'!$E$5:$E$${inputEndRow},"ATM")` }; // D12
-  aoa_cashflow[11][4] = { f: "SUM(C12:D12)" }; // E12
+  aoa_cashflow[12][1] = "Total Pengeluaran"; // B13
+  aoa_cashflow[12][2] = { f: `SUMIFS('Input Harian'!$H$5:$H$${inputEndRow},'Input Harian'!$D$5:$D$${inputEndRow},"Pengeluaran",'Input Harian'!$E$5:$E$${inputEndRow},"Dompet")` }; // C13
+  aoa_cashflow[12][3] = { f: `SUMIFS('Input Harian'!$H$5:$H$${inputEndRow},'Input Harian'!$D$5:$D$${inputEndRow},"Pengeluaran",'Input Harian'!$E$5:$E$${inputEndRow},"ATM")` }; // D13
+  aoa_cashflow[12][4] = { f: `SUMIFS('Input Harian'!$H$5:$H$${inputEndRow},'Input Harian'!$D$5:$D$${inputEndRow},"Pengeluaran",'Input Harian'!$E$5:$E$${inputEndRow},"E-Wallet")` }; // E13
+  aoa_cashflow[12][5] = { f: "SUM(C13:E13)" }; // F13
 
   // Transfer Net Mutasi
-  aoa_cashflow[12][1] = "Net Transfer Saldo"; // B13
-  aoa_cashflow[12][2] = { f: `SUMIFS('Input Harian'!$H$5:$H$${inputEndRow},'Input Harian'!$D$5:$D$${inputEndRow},"Transfer",'Input Harian'!$E$5:$E$${inputEndRow},"ATM") - SUMIFS('Input Harian'!$H$5:$H$${inputEndRow},'Input Harian'!$D$5:$D$${inputEndRow},"Transfer",'Input Harian'!$E$5:$E$${inputEndRow},"Dompet")` }; // C13
-  aoa_cashflow[12][3] = { f: `SUMIFS('Input Harian'!$H$5:$H$${inputEndRow},'Input Harian'!$D$5:$D$${inputEndRow},"Transfer",'Input Harian'!$E$5:$E$${inputEndRow},"Dompet") - SUMIFS('Input Harian'!$H$5:$H$${inputEndRow},'Input Harian'!$D$5:$D$${inputEndRow},"Transfer",'Input Harian'!$E$5:$E$${inputEndRow},"ATM")` }; // D13
-  aoa_cashflow[12][4] = { f: "SUM(C13:D13)" }; // E13
+  aoa_cashflow[13][1] = "Net Transfer Saldo"; // B14
+  aoa_cashflow[13][2] = { f: `SUMIFS('Input Harian'!$H$5:$H$${inputEndRow},'Input Harian'!$D$5:$D$${inputEndRow},"Transfer",'Input Harian'!$F$5:$F$${inputEndRow},"Dompet") - SUMIFS('Input Harian'!$H$5:$H$${inputEndRow},'Input Harian'!$D$5:$D$${inputEndRow},"Transfer",'Input Harian'!$E$5:$E$${inputEndRow},"Dompet")` }; // C14
+  aoa_cashflow[13][3] = { f: `SUMIFS('Input Harian'!$H$5:$H$${inputEndRow},'Input Harian'!$D$5:$D$${inputEndRow},"Transfer",'Input Harian'!$F$5:$F$${inputEndRow},"ATM") - SUMIFS('Input Harian'!$H$5:$H$${inputEndRow},'Input Harian'!$D$5:$D$${inputEndRow},"Transfer",'Input Harian'!$E$5:$E$${inputEndRow},"ATM")` }; // D14
+  aoa_cashflow[13][4] = { f: `SUMIFS('Input Harian'!$H$5:$H$${inputEndRow},'Input Harian'!$D$5:$D$${inputEndRow},"Transfer",'Input Harian'!$F$5:$F$${inputEndRow},"E-Wallet") - SUMIFS('Input Harian'!$H$5:$H$${inputEndRow},'Input Harian'!$D$5:$D$${inputEndRow},"Transfer",'Input Harian'!$E$5:$E$${inputEndRow},"E-Wallet")` }; // E14
+  aoa_cashflow[13][5] = { f: "SUM(C14:E14)" }; // F14
 
   // Net Cash Flow
-  aoa_cashflow[14][1] = "Net Perubahan Kas (Aliran Net)"; // B15
-  aoa_cashflow[14][2] = { f: "C11-C12+C13" }; // C15
-  aoa_cashflow[14][3] = { f: "D11-D12+D13" }; // D15
-  aoa_cashflow[14][4] = { f: "SUM(C15:D15)" }; // E15
+  aoa_cashflow[15][1] = "Net Perubahan Kas (Aliran Net)"; // B16
+  aoa_cashflow[15][2] = { f: "C12-C13+C14" }; // C16
+  aoa_cashflow[15][3] = { f: "D12-D13+D14" }; // D16
+  aoa_cashflow[15][4] = { f: "E12-E13+E14" }; // E16
+  aoa_cashflow[15][5] = { f: "SUM(C16:E16)" }; // F16
 
   // Saldo Akhir
-  aoa_cashflow[16][1] = "3. SALDO AKHIR ESTIMASI"; // B17
-  aoa_cashflow[17][1] = "Dompet (Tunai)"; // B18
-  aoa_cashflow[17][2] = { f: "C5+C15" }; // C18
-  aoa_cashflow[18][1] = "ATM (Rekening)"; // B19
-  aoa_cashflow[18][2] = { f: "C6+D15" }; // C19
-  aoa_cashflow[19][1] = "TOTAL SALDO AKHIR"; // B20
-  aoa_cashflow[19][2] = { f: "SUM(C18:C19)" }; // C20
+  aoa_cashflow[17][1] = "3. SALDO AKHIR ESTIMASI"; // B18
+  aoa_cashflow[18][1] = "Dompet (Tunai)"; // B19
+  aoa_cashflow[18][2] = { f: "C5+C16" }; // C19
+  aoa_cashflow[19][1] = "ATM (Rekening)"; // B20
+  aoa_cashflow[19][2] = { f: "C6+D16" }; // C20
+  aoa_cashflow[20][1] = "E-Wallet (Digital)"; // B21
+  aoa_cashflow[20][2] = { f: "C7+E16" }; // C21
+  aoa_cashflow[21][1] = "TOTAL SALDO AKHIR"; // B22
+  aoa_cashflow[21][2] = { f: "SUM(C19:C21)" }; // C22
 
   const ws_cashflow = XLSX.utils.aoa_to_sheet(aoa_cashflow);
   ws_cashflow['!cols'] = [
@@ -3110,7 +3188,8 @@ async function exportToExcel(year, month) {
     { wch: 30 }, // B: Label
     { wch: 18 }, // C: Dompet
     { wch: 18 }, // D: ATM
-    { wch: 18 }  // E: Total
+    { wch: 18 }, // E: E-Wallet
+    { wch: 18 }  // F: Total
   ];
   XLSX.utils.book_append_sheet(wb, ws_cashflow, "Arus Kas");
 
@@ -3151,85 +3230,7 @@ async function exportToExcel(year, month) {
   XLSX.utils.book_append_sheet(wb, ws_grafik, "Grafik");
 
 
-  expenses.forEach(e => {
-    if (e.date < startOfMonthStr) {
-      const amt = e.amount || 0;
-      if (e.type === 'expense') {
-        if (e.source === 'ATM') startATM -= amt;
-        else startDompet -= amt;
-      } else if (e.type === 'income') {
-        if (e.source === 'ATM') startATM += amt;
-        else startDompet += amt;
-      } else if (e.type === 'transfer') {
-        const from = e.source;
-        const to = e.transferTo || (from === 'Dompet' ? 'ATM' : 'Dompet');
-        if (from === 'Dompet' && to === 'ATM') {
-          startDompet -= amt;
-          startATM += amt;
-        } else if (from === 'ATM' && to === 'Dompet') {
-          startATM -= amt;
-          startDompet += amt;
-        }
-      }
-    }
-  });
 
-  const aoa_aruskas = [];
-  for (let r = 0; r < 15; r++) {
-    aoa_aruskas.push(Array(6).fill(""));
-  }
-
-  aoa_aruskas[1][1] = `RINGKASAN ARUS KAS - ${monthName.toUpperCase()} ${year}`; // B2
-  aoa_aruskas[3][1] = "Keterangan"; // B4
-  aoa_aruskas[3][2] = "Dompet (Tunai)"; // C4
-  aoa_aruskas[3][3] = "ATM (Rekening)"; // D4
-  aoa_aruskas[3][4] = "Total"; // E4
-
-  // Row 5: Saldo Awal
-  aoa_aruskas[4][1] = "Saldo Awal";
-  aoa_aruskas[4][2] = startDompet;
-  aoa_aruskas[4][3] = startATM;
-  aoa_aruskas[4][4] = { f: "SUM(C5:D5)" };
-
-  // Row 6: Total Pemasukan
-  aoa_aruskas[5][1] = "Total Pemasukan";
-  aoa_aruskas[5][2] = { f: `SUMIFS('Input Harian'!$H$5:$H$${inputEndRow},'Input Harian'!$D$5:$D$${inputEndRow},"Pemasukan",'Input Harian'!$E$5:$E$${inputEndRow},"Dompet")` };
-  aoa_aruskas[5][3] = { f: `SUMIFS('Input Harian'!$H$5:$H$${inputEndRow},'Input Harian'!$D$5:$D$${inputEndRow},"Pemasukan",'Input Harian'!$E$5:$E$${inputEndRow},"ATM")` };
-  aoa_aruskas[5][4] = { f: "SUM(C6:D6)" };
-
-  // Row 7: Total Pengeluaran
-  aoa_aruskas[6][1] = "Total Pengeluaran";
-  aoa_aruskas[6][2] = { f: `SUMIFS('Input Harian'!$H$5:$H$${inputEndRow},'Input Harian'!$D$5:$D$${inputEndRow},"Pengeluaran",'Input Harian'!$E$5:$E$${inputEndRow},"Dompet")` };
-  aoa_aruskas[6][3] = { f: `SUMIFS('Input Harian'!$H$5:$H$${inputEndRow},'Input Harian'!$D$5:$D$${inputEndRow},"Pengeluaran",'Input Harian'!$E$5:$E$${inputEndRow},"ATM")` };
-  aoa_aruskas[6][4] = { f: "SUM(C7:D7)" };
-
-  // Row 8: Transfer Masuk (Pindahan Ke)
-  aoa_aruskas[7][1] = "Transfer Masuk (Pindahan Ke)";
-  aoa_aruskas[7][2] = { f: `SUMIFS('Input Harian'!$H$5:$H$${inputEndRow},'Input Harian'!$D$5:$D$${inputEndRow},"Transfer",'Input Harian'!$E$5:$E$${inputEndRow},"ATM")` };
-  aoa_aruskas[7][3] = { f: `SUMIFS('Input Harian'!$H$5:$H$${inputEndRow},'Input Harian'!$D$5:$D$${inputEndRow},"Transfer",'Input Harian'!$E$5:$E$${inputEndRow},"Dompet")` };
-  aoa_aruskas[7][4] = { f: "SUM(C8:D8)" };
-
-  // Row 9: Transfer Keluar (Pindahan Dari)
-  aoa_aruskas[8][1] = "Transfer Keluar (Pindahan Dari)";
-  aoa_aruskas[8][2] = { f: `SUMIFS('Input Harian'!$H$5:$H$${inputEndRow},'Input Harian'!$D$5:$D$${inputEndRow},"Transfer",'Input Harian'!$E$5:$E$${inputEndRow},"Dompet")` };
-  aoa_aruskas[8][3] = { f: `SUMIFS('Input Harian'!$H$5:$H$${inputEndRow},'Input Harian'!$D$5:$D$${inputEndRow},"Transfer",'Input Harian'!$E$5:$E$${inputEndRow},"ATM")` };
-  aoa_aruskas[8][4] = { f: "SUM(C9:D9)" };
-
-  // Row 10: Saldo Akhir
-  aoa_aruskas[9][1] = "Saldo Akhir";
-  aoa_aruskas[9][2] = { f: "C5+C6-C7+C8-C9" };
-  aoa_aruskas[9][3] = { f: "D5+D6-D7+D8-D9" };
-  aoa_aruskas[9][4] = { f: "SUM(C10:D10)" };
-
-  const ws_aruskas = XLSX.utils.aoa_to_sheet(aoa_aruskas);
-  ws_aruskas['!cols'] = [
-    { wch: 3 },  // A
-    { wch: 30 }, // B: Keterangan
-    { wch: 18 }, // C: Dompet (Tunai)
-    { wch: 18 }, // D: ATM (Rekening)
-    { wch: 18 }  // E: Total
-  ];
-  XLSX.utils.book_append_sheet(wb, ws_aruskas, "Arus Kas");
 
   // 8. WRITE FILE & DOWNLOAD
   XLSX.writeFile(wb, `${monthName} Tracker Managemen.xlsx`);

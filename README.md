@@ -11,12 +11,12 @@ Aplikasi web pencatatan keuangan pribadi modern yang dirancang untuk memantau pe
 Aplikasi ini dilengkapi dengan fitur manajemen keuangan lengkap yang dikemas dalam antarmuka premium dan responsif:
 
 1. **Dashboard Interaktif**:
-   * **Saldo Real-time**: Pemantauan saldo kumulatif terpisah untuk Dompet (Tunai) dan ATM (Rekening Bank).
+   * **Saldo Real-time**: Pemantauan saldo kumulatif terpisah untuk Dompet (Tunai), ATM (Rekening Bank), dan E-Wallet (Dompet Digital).
    * **KPI Ringkasan Bulanan**: Menampilkan total pengeluaran, pemasukan, rata-rata harian, dan hari pengeluaran tertinggi.
    * **Grafik Tren & Kategori**: Visualisasi instan untuk tren pengeluaran harian dan persentase kategori menggunakan **Chart.js**.
 
 2. **Input Harian (Manajemen Transaksi)**:
-   * Mendukung tiga tipe transaksi: **Pengeluaran (Expense)**, **Pemasukan (Income)**, dan **Transfer Saldo** antar Dompet ↔ ATM.
+   * Mendukung tiga tipe transaksi: **Pengeluaran (Expense)**, **Pemasukan (Income)**, dan **Transfer Saldo** antar Dompet ↔ ATM ↔ E-Wallet.
    * Input divalidasi secara interaktif sebelum disimpan ke database.
    * List transaksi yang dilengkapi fitur **Inline Edit** (edit langsung di tempat) dan tombol hapus cepat.
 
@@ -78,11 +78,11 @@ Aplikasi ini terintegrasi dengan 3 tabel utama di Supabase:
    * `date` (date)
    * `day_name` (text)
    * `type` (text - 'expense' | 'income' | 'transfer')
-   * `source` (text - 'Dompet' | 'ATM')
+   * `source` (text - 'Dompet' | 'ATM' | 'E-Wallet')
    * `category` (text)
    * `description` (text)
    * `amount` (numeric)
-   * `transfer_to` (text)
+   * `transfer_to` (text - 'Dompet' | 'ATM' | 'E-Wallet')
    * `income_category` (text)
 
 2. **`budgets`**:
@@ -95,6 +95,7 @@ Aplikasi ini terintegrasi dengan 3 tabel utama di Supabase:
    * `user_id` (uuid, primary key)
    * `initial_dompet` (numeric)
    * `initial_atm` (numeric)
+   * `initial_ewallet` (numeric)
    * `initial_date` (date)
    * `updated_at` (timestamptz)
 

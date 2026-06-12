@@ -384,6 +384,13 @@ body {
   margin-bottom: 24px;
 }
 
+.grid-4 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
 .grid-5 {
   display: grid;
   grid-template-columns: 1fr;
@@ -1198,6 +1205,10 @@ body {
 
 .balance-card.total {
   background: linear-gradient(135deg, #8A9B6E, #687A4F);
+}
+
+.balance-card.ewallet {
+  background: linear-gradient(135deg, #7A6B8A, #5C4F6E);
 }
 
 .balance-card-header {
