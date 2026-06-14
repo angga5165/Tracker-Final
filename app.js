@@ -830,6 +830,168 @@ async function viewDashboard() {
 
   const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
 
+  // --- INSIGHT BULAN INI CALCULATIONS ---
+  const monthExpenses = monthAllTransactions.filter(e => e.type === 'expense');
+  const budget = await loadBudget(monthStr);
+
+  // 1. Dominasi Pengeluaran — kategori dengan total pengeluaran terbesar
+  const catTotals = {};
+  const catCounts = {};
+  monthExpenses.forEach(e => {
+    const cat = e.category || 'Lainnya';
+    catTotals[cat] = (catTotals[cat] || 0) + (e.amount || 0);
+    catCounts[cat] = (catCounts[cat] || 0) + 1;
+  });
+  let dominantCat = null;
+  let dominantTotal = 0;
+  let dominantPct = 0;
+  Object.entries(catTotals).forEach(([cat, total]) => {
+    if (total > dominantTotal) {
+      dominantTotal = total;
+      dominantCat = cat;
+    }
+  });
+  if (monthTotal > 0 && dominantCat) {
+    dominantPct = ((dominantTotal / monthTotal) * 100).toFixed(1);
+  }
+
+  // 2. Hari Paling Boros — dengan kategori dominan di hari itu
+  let borosDateStr = '';
+  let borosDayName = '';
+  let borosTotal = 0;
+  let borosCat = '';
+  if (highestDay) {
+    borosDateStr = `${parseInt(highestDay.date.split('-')[2])} ${MONTH_NAMES[currentMonth - 1]}`;
+    borosDayName = highestDay.dayName;
+    borosTotal = highestDay.total;
+    // Cari kategori terbesar di hari itu
+    const dayExpenses = monthExpenses.filter(e => e.date === highestDay.date);
+    const dayCatTotals = {};
+    dayExpenses.forEach(e => {
+      const cat = e.category || 'Lainnya';
+      dayCatTotals[cat] = (dayCatTotals[cat] || 0) + (e.amount || 0);
+    });
+    let maxDayCat = '';
+    let maxDayCatTotal = 0;
+    Object.entries(dayCatTotals).forEach(([cat, total]) => {
+      if (total > maxDayCatTotal) {
+        maxDayCatTotal = total;
+        maxDayCat = cat;
+      }
+    });
+    borosCat = maxDayCat;
+  }
+
+  // 3. Prediktif Sisa Budget — kategori dengan sisa budget terbesar
+  const today = new Date();
+  let remainingDays = daysInMonth;
+  if (today.getFullYear() === currentYear && (today.getMonth() + 1) === currentMonth) {
+    remainingDays = daysInMonth - today.getDate();
+    if (remainingDays <= 0) remainingDays = 1;
+  }
+  let bestBudgetCat = '';
+  let bestBudgetRemaining = 0;
+  let bestBudgetPerDay = 0;
+  CategoryLabels.forEach(cat => {
+    const budgetAmt = budget.categories[cat] || 0;
+    const spent = catTotals[cat] || 0;
+    const remaining = budgetAmt - spent;
+    if (remaining > bestBudgetRemaining && budgetAmt > 0) {
+      bestBudgetRemaining = remaining;
+      bestBudgetCat = cat;
+      bestBudgetPerDay = Math.round(remaining / remainingDays);
+    }
+  });
+
+  // 4. Saving Rate — rasio tabungan dari pemasukan
+  let savingRate = 0;
+  let savingAmount = 0;
+  if (monthIncome > 0) {
+    savingAmount = monthIncome - monthTotal;
+    savingRate = ((savingAmount / monthIncome) * 100).toFixed(1);
+  }
+
+  // --- BUILD INSIGHT HTML ---
+  let insightItemsHtml = '';
+
+  // Insight 1: Dominasi
+  if (dominantCat && monthTotal > 0) {
+    insightItemsHtml += `
+      <div class="insight-item">
+        <div class="insight-icon" style="background-color: var(--primary-light); color: var(--primary);">
+          <i data-lucide="pie-chart"></i>
+        </div>
+        <div>
+          <p class="insight-label">Dominasi Pengeluaran</p>
+          <p class="insight-value">${dominantCat} mendominasi ${dominantPct}% dari total</p>
+        </div>
+      </div>
+    `;
+  }
+
+  // Insight 2: Hari Paling Boros
+  if (highestDay) {
+    insightItemsHtml += `
+      <div class="insight-item">
+        <div class="insight-icon" style="background-color: rgba(196, 112, 90, 0.12); color: #C4705A;">
+          <i data-lucide="alert-triangle"></i>
+        </div>
+        <div>
+          <p class="insight-label">Hari Paling Boros</p>
+          <p class="insight-value">${borosDayName}, ${borosDateStr} (${formatRupiah(borosTotal)})${borosCat ? ` — kategori ${borosCat}` : ''}</p>
+        </div>
+      </div>
+    `;
+  }
+
+  // Insight 3: Prediktif Sisa Budget
+  if (bestBudgetCat && bestBudgetRemaining > 0) {
+    insightItemsHtml += `
+      <div class="insight-item">
+        <div class="insight-icon" style="background-color: rgba(138, 155, 110, 0.12); color: #8A9B6E;">
+          <i data-lucide="coins"></i>
+        </div>
+        <div>
+          <p class="insight-label">Prediksi Budget</p>
+          <p class="insight-value">Sisa budget ${bestBudgetCat} ${formatRupiah(bestBudgetRemaining)} cukup ${formatRupiah(bestBudgetPerDay)}/hari</p>
+        </div>
+      </div>
+    `;
+  }
+
+  // Insight 4: Saving Rate
+  if (monthIncome > 0) {
+    const savingColor = savingAmount >= 0 ? '#8A9B6E' : '#C4705A';
+    const savingBg = savingAmount >= 0 ? 'rgba(138, 155, 110, 0.12)' : 'rgba(196, 112, 90, 0.12)';
+    const savingText = savingAmount >= 0
+      ? `Anda menabung ${savingRate}% dari pemasukan bulan ini`
+      : `Pengeluaran melebihi pemasukan sebesar ${formatRupiah(Math.abs(savingAmount))}`;
+    insightItemsHtml += `
+      <div class="insight-item">
+        <div class="insight-icon" style="background-color: ${savingBg}; color: ${savingColor};">
+          <i data-lucide="trending-up"></i>
+        </div>
+        <div>
+          <p class="insight-label">Rasio Tabungan</p>
+          <p class="insight-value">${savingText}</p>
+        </div>
+      </div>
+    `;
+  }
+
+  const insightHtml = insightItemsHtml ? `
+    <!-- Insight Bulan Ini -->
+    <div class="card insight-card">
+      <h3 class="card-title" style="display: flex; align-items: center; gap: 8px;">
+        <i data-lucide="lightbulb" style="width: 18px; height: 18px; color: var(--primary);"></i>
+        Insight Bulan Ini
+      </h3>
+      <div class="insight-grid">
+        ${insightItemsHtml}
+      </div>
+    </div>
+  ` : '';
+
   return `
     <div class="view-header">
       <h2 class="card-title" style="font-size: 20px;">Dashboard</h2>
@@ -949,6 +1111,8 @@ async function viewDashboard() {
         <canvas id="dashboard-trend-chart"></canvas>
       </div>
     </div>
+
+    ${insightHtml}
 
     <div class="grid-2">
       <!-- Donut Chart -->
