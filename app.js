@@ -911,24 +911,33 @@ async function viewDashboard() {
     borosCat = maxDayCat;
   }
 
-  // 3. Prediktif Sisa Budget — kategori dengan sisa budget terbesar
+  // 3. Prediktif Sisa Budget — kategori dengan persentase sisa budget terkecil (paling kritis)
   const today = new Date();
   let remainingDays = daysInMonth;
   if (today.getFullYear() === currentYear && (today.getMonth() + 1) === currentMonth) {
     remainingDays = daysInMonth - today.getDate();
     if (remainingDays <= 0) remainingDays = 1;
   }
-  let bestBudgetCat = '';
-  let bestBudgetRemaining = 0;
-  let bestBudgetPerDay = 0;
+  let criticalBudgetCat = '';
+  let criticalBudgetRemaining = 0;
+  let criticalBudgetRatio = Infinity;
+  let criticalBudgetPerDay = 0;
+  let isExceeded = false;
+
   CategoryLabels.forEach(cat => {
     const budgetAmt = budget.categories[cat] || 0;
     const spent = catTotals[cat] || 0;
     const remaining = budgetAmt - spent;
-    if (remaining > bestBudgetRemaining && budgetAmt > 0) {
-      bestBudgetRemaining = remaining;
-      bestBudgetCat = cat;
-      bestBudgetPerDay = Math.round(remaining / remainingDays);
+
+    if (budgetAmt > 0) {
+      const ratio = remaining / budgetAmt;
+      if (ratio < criticalBudgetRatio) {
+        criticalBudgetRatio = ratio;
+        criticalBudgetCat = cat;
+        criticalBudgetRemaining = remaining;
+        criticalBudgetPerDay = Math.round(Math.abs(remaining) / remainingDays);
+        isExceeded = remaining < 0;
+      }
     }
   });
 
@@ -973,16 +982,31 @@ async function viewDashboard() {
     `;
   }
 
-  // Insight 3: Prediktif Sisa Budget
-  if (bestBudgetCat && bestBudgetRemaining > 0) {
+  // Insight 3: Prediktif Sisa Budget (Kritis)
+  if (criticalBudgetCat) {
+    let budgetWarningColor = '#D9A752';
+    let budgetWarningBg = 'rgba(217, 167, 82, 0.12)';
+    let budgetWarningIcon = 'bell';
+    let budgetWarningText = '';
+
+    if (isExceeded) {
+      budgetWarningColor = '#C4705A';
+      budgetWarningBg = 'rgba(196, 112, 90, 0.12)';
+      budgetWarningIcon = 'alert-circle';
+      budgetWarningText = `Budget ${criticalBudgetCat} terlampaui sebesar ${formatRupiah(Math.abs(criticalBudgetRemaining))}`;
+    } else {
+      const pctLeft = Math.max(0, Math.round(criticalBudgetRatio * 100));
+      budgetWarningText = `Sisa budget ${criticalBudgetCat} tinggal ${pctLeft}% (${formatRupiah(criticalBudgetRemaining)}) cukup ${formatRupiah(criticalBudgetPerDay)}/hari`;
+    }
+
     insightItemsHtml += `
       <div class="insight-item">
-        <div class="insight-icon" style="background-color: rgba(138, 155, 110, 0.12); color: #8A9B6E;">
-          <i data-lucide="coins"></i>
+        <div class="insight-icon" style="background-color: ${budgetWarningBg}; color: ${budgetWarningColor};">
+          <i data-lucide="${budgetWarningIcon}"></i>
         </div>
         <div>
-          <p class="insight-label">Prediksi Budget</p>
-          <p class="insight-value">Sisa budget ${bestBudgetCat} ${formatRupiah(bestBudgetRemaining)} cukup ${formatRupiah(bestBudgetPerDay)}/hari</p>
+          <p class="insight-label">Peringatan Budget</p>
+          <p class="insight-value">${budgetWarningText}</p>
         </div>
       </div>
     `;
