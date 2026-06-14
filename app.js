@@ -100,6 +100,78 @@ function hideAuthScreen() {
   if (appContainer) appContainer.style.display = '';
 }
 
+// --- 2-STEP VERIFICATION HELPER ---
+/**
+ * Membuka custom modal untuk meminta pengguna mengetik kata kunci tertentu.
+ * Mengembalikan Promise<boolean> (true jika konfirmasi sukses, false jika dibatalkan).
+ */
+function confirmActionWithText(title, description, requiredText) {
+  return new Promise((resolve) => {
+    const modal = document.getElementById('verification-modal');
+    const titleEl = document.getElementById('verification-title');
+    const descEl = document.getElementById('verification-desc');
+    const labelEl = document.getElementById('verification-label');
+    const inputEl = document.getElementById('verification-input');
+    const cancelBtn = document.getElementById('verification-cancel-btn');
+    const confirmBtn = document.getElementById('verification-confirm-btn');
+
+    if (!modal || !inputEl || !confirmBtn) {
+      // Fallback aman ke prompt native jika elemen DOM tidak ditemukan
+      const fallback = prompt(`${title}\n\n${description}\n\nKetik "${requiredText}" untuk melanjutkan:`);
+      resolve(fallback === requiredText);
+      return;
+    }
+
+    // Mengisi konten modal
+    titleEl.textContent = title;
+    descEl.textContent = description;
+    labelEl.innerHTML = `Ketik tulisan berikut secara tepat untuk melanjutkan: <br><strong style="color: var(--primary); font-size: 15px; margin-top: 4px; display: inline-block;">${requiredText}</strong>`;
+    inputEl.value = '';
+    inputEl.placeholder = `Ketik "${requiredText}"`;
+    confirmBtn.disabled = true;
+
+    // Menampilkan modal
+    modal.classList.add('active');
+    setTimeout(() => inputEl.focus(), 100);
+
+    // Event listener: aktifkan tombol hanya jika input cocok
+    const onInput = () => {
+      confirmBtn.disabled = (inputEl.value.trim() !== requiredText);
+    };
+
+    const cleanup = () => {
+      inputEl.removeEventListener('input', onInput);
+      inputEl.removeEventListener('keydown', onKeyDown);
+      cancelBtn.removeEventListener('click', onCancel);
+      confirmBtn.removeEventListener('click', onConfirm);
+      modal.classList.remove('active');
+    };
+
+    const onCancel = () => {
+      cleanup();
+      resolve(false);
+    };
+
+    const onConfirm = () => {
+      cleanup();
+      resolve(true);
+    };
+
+    const onKeyDown = (e) => {
+      if (e.key === 'Enter' && !confirmBtn.disabled) {
+        onConfirm();
+      } else if (e.key === 'Escape') {
+        onCancel();
+      }
+    };
+
+    inputEl.addEventListener('input', onInput);
+    inputEl.addEventListener('keydown', onKeyDown);
+    cancelBtn.addEventListener('click', onCancel);
+    confirmBtn.addEventListener('click', onConfirm);
+  });
+}
+
 // State variables for year and month
 let currentYear = 2026;
 let currentMonth = 6; // Default to June
@@ -770,7 +842,14 @@ async function setView(viewName) {
     `;
     lucide.createIcons();
     document.getElementById('error-logout-btn')?.addEventListener('click', async () => {
-      await handleLogout();
+      const confirmed = await confirmActionWithText(
+        'Keluar Sesi',
+        'Apakah Anda yakin ingin keluar dari akun Anda di perangkat ini?',
+        'Keluar'
+      );
+      if (confirmed) {
+        await handleLogout();
+      }
     });
   }
 }
@@ -2863,9 +2942,15 @@ async function postRenderPengaturan() {
     }, 2000);
   });
 
-  // Reset database handler â€” deletes all Supabase data for current user
+  // Reset database handler — deletes all Supabase data for current user
   resetBtn?.addEventListener('click', async () => {
-    if (confirm('Apakah Anda yakin ingin mereset semua data pengeluaran? Tindakan ini tidak dapat dibatalkan.')) {
+    const confirmed = await confirmActionWithText(
+      '⚠️ Peringatan Reset Data',
+      'Tindakan ini akan menghapus semua pengeluaran, budget, dan saldo awal Anda secara permanen dari database. Tindakan ini tidak dapat dibatalkan.',
+      'Reset Data'
+    );
+
+    if (confirmed) {
       await supabaseClient.from('transactions').delete().eq('user_id', currentUserId);
       await supabaseClient.from('budgets').delete().eq('user_id', currentUserId);
       await supabaseClient.from('balances').delete().eq('user_id', currentUserId);
@@ -2877,7 +2962,13 @@ async function postRenderPengaturan() {
   // Logout handler
   const logoutSettingsBtn = document.getElementById('logout-settings-btn');
   logoutSettingsBtn?.addEventListener('click', async () => {
-    if (confirm('Apakah Anda yakin ingin keluar dari akun?')) {
+    const confirmed = await confirmActionWithText(
+      'Keluar Sesi',
+      'Apakah Anda yakin ingin keluar dari akun Anda di perangkat ini?',
+      'Keluar'
+    );
+
+    if (confirmed) {
       await handleLogout();
     }
   });

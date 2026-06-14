@@ -159,6 +159,24 @@
     </div>
   </div>
 
+  <!-- 2-Step Verification Modal Dialog -->
+  <div class="modal-overlay" id="verification-modal">
+    <div class="modal-content" style="max-width: 400px;">
+      <div class="modal-header">
+        <h3 class="modal-title" id="verification-title">Konfirmasi Keamanan</h3>
+        <p class="modal-desc" id="verification-desc">Tindakan ini memerlukan verifikasi tambahan.</p>
+      </div>
+      <div class="form-group" style="margin-top: 16px; text-align: left;">
+        <label class="form-label" id="verification-label">Ketik teks berikut untuk melanjutkan:</label>
+        <input type="text" id="verification-input" class="form-input" placeholder="" autocomplete="off" style="margin-top: 8px;">
+      </div>
+      <div class="modal-footer" style="margin-top: 24px;">
+        <button class="btn btn-outline" id="verification-cancel-btn">Batal</button>
+        <button class="btn btn-primary" id="verification-confirm-btn" style="background-color: var(--primary);" disabled>Konfirmasi</button>
+      </div>
+    </div>
+  </div>
+
   <!-- CDNs for External Libraries -->
   <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
