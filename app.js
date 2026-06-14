@@ -704,46 +704,75 @@ async function setView(viewName) {
   });
 
   // Render view
-  let html = '';
-  switch (viewName) {
-    case 'dashboard':
-      pageTitleEl.textContent = 'Dashboard';
-      html = await viewDashboard();
-      break;
-    case 'input':
-      pageTitleEl.textContent = 'Input Harian';
-      html = viewInputHarian();
-      break;
-    case 'rekap':
-      pageTitleEl.textContent = 'Rekap Harian';
-      html = await viewRekapHarian();
-      break;
-    case 'analisis':
-      pageTitleEl.textContent = 'Analisis Kategori';
-      html = await viewAnalisisKategori();
-      break;
-    case 'visualisasi':
-      pageTitleEl.textContent = 'Visualisasi';
-      html = await viewVisualisasi();
-      break;
-    case 'pengaturan':
-      pageTitleEl.textContent = 'Pengaturan';
-      html = await viewPengaturan();
-      break;
-    default:
-      pageTitleEl.textContent = 'Dashboard';
-      html = await viewDashboard();
+  try {
+    let html = '';
+    switch (viewName) {
+      case 'dashboard':
+        pageTitleEl.textContent = 'Dashboard';
+        html = await viewDashboard();
+        break;
+      case 'input':
+        pageTitleEl.textContent = 'Input Harian';
+        html = viewInputHarian();
+        break;
+      case 'rekap':
+        pageTitleEl.textContent = 'Rekap Harian';
+        html = await viewRekapHarian();
+        break;
+      case 'analisis':
+        pageTitleEl.textContent = 'Analisis Kategori';
+        html = await viewAnalisisKategori();
+        break;
+      case 'visualisasi':
+        pageTitleEl.textContent = 'Visualisasi';
+        html = await viewVisualisasi();
+        break;
+      case 'pengaturan':
+        pageTitleEl.textContent = 'Pengaturan';
+        html = await viewPengaturan();
+        break;
+      default:
+        pageTitleEl.textContent = 'Dashboard';
+        html = await viewDashboard();
+    }
+
+    viewContainer.innerHTML = `<div class="view-container">${html}</div>`;
+    lucide.createIcons();
+
+    // Trigger post-render callbacks
+    if (viewName === 'dashboard')        await postRenderDashboard();
+    else if (viewName === 'input')       await postRenderInputHarian();
+    else if (viewName === 'rekap')       await postRenderRekapHarian();
+    else if (viewName === 'visualisasi') await postRenderVisualisasi();
+    else if (viewName === 'pengaturan')  await postRenderPengaturan();
+  } catch (error) {
+    console.error('[setView Error]', error);
+    
+    // Tampilkan pesan error ramah pengguna dengan tombol self-healing (keluar akun)
+    viewContainer.innerHTML = `
+      <div class="card" style="margin: 32px auto; max-width: 480px; padding: 24px; text-align: center; border-top: 4px solid #c0392b;">
+        <h3 style="color: #c0392b; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+          <i data-lucide="alert-octagon"></i> Terjadi Kesalahan
+        </h3>
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px; line-height: 1.5;">
+          Aplikasi gagal memuat data. Sesi Anda mungkin telah kedaluwarsa secara paksa di server, atau terdapat kendala koneksi database.
+        </p>
+        <div style="background: rgba(192, 57, 43, 0.05); color: #c0392b; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 11px; text-align: left; margin-bottom: 24px; word-break: break-all;">
+          Detail: ${error.message || error}
+        </div>
+        <div style="display: flex; gap: 12px; justify-content: center;">
+          <button class="btn btn-outline" onclick="location.reload()" style="flex: 1; font-size: 13px;">Muat Ulang</button>
+          <button class="btn btn-primary" id="error-logout-btn" style="flex: 1; background-color: #c0392b; border-color: #c0392b; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+            <i data-lucide="log-out" style="width: 14px; height: 14px;"></i> Keluar Akun
+          </button>
+        </div>
+      </div>
+    `;
+    lucide.createIcons();
+    document.getElementById('error-logout-btn')?.addEventListener('click', async () => {
+      await handleLogout();
+    });
   }
-
-  viewContainer.innerHTML = `<div class="view-container">${html}</div>`;
-  lucide.createIcons();
-
-  // Trigger post-render callbacks
-  if (viewName === 'dashboard')        await postRenderDashboard();
-  else if (viewName === 'input')       await postRenderInputHarian();
-  else if (viewName === 'rekap')       await postRenderRekapHarian();
-  else if (viewName === 'visualisasi') await postRenderVisualisasi();
-  else if (viewName === 'pengaturan')  await postRenderPengaturan();
 }
 
 async function getDailyIncomeSummaries(year, month) {
@@ -2704,6 +2733,21 @@ async function viewPengaturan() {
           </button>
         </div>
       </div>
+
+      <!-- Akun Pengguna -->
+      <div class="card">
+        <h3 class="card-title" style="margin-bottom: 12px;">Akun</h3>
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px;">
+          <div>
+            <p style="font-size: 14px; font-weight: 500;">Keluar Sesi</p>
+            <p class="view-subtitle" style="font-size: 12px;">Keluar dari akun Anda pada perangkat ini</p>
+          </div>
+          <button class="btn btn-outline" id="logout-settings-btn" style="border-color: #c0392b; color: #c0392b; display: flex; align-items: center; gap: 6px;">
+            <i data-lucide="log-out" style="width: 14px; height: 14px;"></i>
+            Keluar
+          </button>
+        </div>
+      </div>
     </div>
   `;
 }
@@ -2803,6 +2847,14 @@ async function postRenderPengaturan() {
       await supabaseClient.from('balances').delete().eq('user_id', currentUserId);
 
       await setView('dashboard');
+    }
+  });
+
+  // Logout handler
+  const logoutSettingsBtn = document.getElementById('logout-settings-btn');
+  logoutSettingsBtn?.addEventListener('click', async () => {
+    if (confirm('Apakah Anda yakin ingin keluar dari akun?')) {
+      await handleLogout();
     }
   });
 }
@@ -2991,13 +3043,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  // 6. Auth state listener â€” handles login, logout, session restore
+  // 6. Auth state listener — handles login, logout, session restore
   supabaseClient.auth.onAuthStateChange(async (event, session) => {
     if (event === 'SIGNED_IN' && session) {
-      currentUserId = session.user.id;
-      hideAuthScreen();
-      await runMigration();
-      await setView('dashboard');
+      if (currentUserId !== session.user.id) {
+        currentUserId = session.user.id;
+        hideAuthScreen();
+        await runMigration();
+        await setView('dashboard');
+      }
     } else if (event === 'SIGNED_OUT') {
       currentUserId = null;
       showAuthScreen();
@@ -3007,10 +3061,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 7. Check for existing session (page refresh / returning user)
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (session) {
-    currentUserId = session.user.id;
-    hideAuthScreen();
-    await runMigration();
-    await setView('dashboard');
+    if (currentUserId !== session.user.id) {
+      currentUserId = session.user.id;
+      hideAuthScreen();
+      await runMigration();
+      await setView('dashboard');
+    }
   } else {
     showAuthScreen();
   }
