@@ -172,17 +172,15 @@ function confirmActionWithText(title, description, requiredText) {
   });
 }
 
-// State variables for year and month
-let currentYear = 2026;
-let currentMonth = 6; // Default to June
-
-// Auto-detect month if the current calendar year is 2026
+// State variables for year and month — selalu mengikuti tanggal saat ini
 const todayObj = new Date();
-if (todayObj.getFullYear() === 2026) {
-  currentMonth = todayObj.getMonth() + 1; // 1-12
-}
+let currentYear = todayObj.getFullYear();
+let currentMonth = todayObj.getMonth() + 1; // 1-12
 
 const getActiveMonthStr = () => `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
+
+// Tanggal 1 bulan aktif — default "Tanggal Mulai Tracking" untuk pengguna baru
+const getFirstDayOfActiveMonth = () => `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`;
 
 function getDefaultFormDate() {
   const today = new Date();
@@ -448,7 +446,7 @@ async function loadBalance() {
       initialDompet: 0,
       initialATM:    0,
       initialEWallet: 0,
-      initialDate:   '2026-05-01',
+      initialDate:   getFirstDayOfActiveMonth(),
     };
     await saveBalance(defaultBalance);
     return defaultBalance;
@@ -458,7 +456,7 @@ async function loadBalance() {
       initialDompet: 0,
       initialATM:    0,
       initialEWallet: 0,
-      initialDate:   '2026-05-01',
+      initialDate:   getFirstDayOfActiveMonth(),
     };
   }
 }
@@ -477,8 +475,10 @@ async function saveBalance(balanceData) {
       }, { onConflict: 'user_id' });
 
     if (error) throw error;
+    return true;
   } catch (e) {
     console.error('[saveBalance]', e);
+    return false;
   }
 }
 
@@ -490,7 +490,12 @@ async function calculateCurrentBalance() {
   let atm = initial.initialATM;
   let ewallet = initial.initialEWallet || 0;
 
+  // "Tanggal Mulai Tracking" kini berfungsi: saldo awal berlaku pada tanggal tersebut,
+  // sehingga transaksi sebelumnya tidak mempengaruhi saldo berjalan.
+  const trackingStart = initial.initialDate || null;
+
   expenses.forEach(e => {
+    if (trackingStart && e.date && e.date < trackingStart) return;
     const amt = e.amount || 0;
     if (e.type === 'expense') {
       if (e.source === 'ATM') {
@@ -762,7 +767,17 @@ function getChartColors() {
 const viewContainer = document.getElementById('app-view');
 const pageTitleEl = document.getElementById('page-title');
 
-async function setView(viewName) {
+// Serialisasi render: navigasi cepat (mis. ganti bulan lalu tahun) diantrekan
+// agar dua render tidak pernah berjalan bersamaan dan saling menimpa (race condition chart).
+let viewQueue = Promise.resolve();
+function setView(viewName) {
+  viewQueue = viewQueue
+    .then(() => doSetView(viewName))
+    .catch(err => console.error('[setView]', err));
+  return viewQueue;
+}
+
+async function doSetView(viewName) {
   // Clear charts
   Object.keys(activeCharts).forEach(destroyChart);
   
@@ -2792,8 +2807,9 @@ async function viewPengaturan() {
             <label class="form-label">Tanggal Mulai Tracking</label>
             <div class="input-container">
               <i data-lucide="calendar" class="input-icon"></i>
-              <input type="date" id="initial-date-input" class="form-input has-icon" value="${balanceData.initialDate}">
+              <input type="date" id="initial-date-input" class="form-input has-icon" value="${balanceData.initialDate || ''}">
             </div>
+            <p class="view-subtitle" style="font-size: 12px; margin-top: 6px;">Saldo awal berlaku pada tanggal ini. Transaksi sebelum tanggal ini tidak dihitung pada saldo berjalan.</p>
           </div>
 
           <button class="btn btn-primary" id="save-balance-btn" style="width: 100%; height: 42px;">
@@ -2883,24 +2899,29 @@ async function postRenderPengaturan() {
     const dVal = parseInt(dompetInput.value.replace(/\D/g, '')) || 0;
     const aVal = parseInt(atmInput.value.replace(/\D/g, '')) || 0;
     const eVal = parseInt(ewalletInput.value.replace(/\D/g, '')) || 0;
-    const dateVal = dateInput.value || '2026-05-01';
+    const dateVal = dateInput.value || getFirstDayOfActiveMonth();
 
-    await saveBalance({
+    const saved = await saveBalance({
       initialDompet: dVal,
       initialATM: aVal,
       initialEWallet: eVal,
       initialDate: dateVal
     });
 
-    saveBalanceBtn.innerHTML = '<i data-lucide="check" style="width: 16px; height: 16px;"></i> Tersimpan!';
-    saveBalanceBtn.style.backgroundColor = 'var(--success)';
+    if (saved) {
+      saveBalanceBtn.innerHTML = '<i data-lucide="check" style="width: 16px; height: 16px;"></i> Tersimpan!';
+      saveBalanceBtn.style.backgroundColor = 'var(--success)';
+    } else {
+      saveBalanceBtn.innerHTML = '<i data-lucide="x" style="width: 16px; height: 16px;"></i> Gagal menyimpan!';
+      saveBalanceBtn.style.backgroundColor = '#c0392b';
+    }
     lucide.createIcons();
 
     setTimeout(() => {
       saveBalanceBtn.innerHTML = '<i data-lucide="save" style="width: 16px; height: 16px;"></i> Simpan Saldo Awal';
       saveBalanceBtn.style.backgroundColor = '';
       lucide.createIcons();
-    }, 2000);
+    }, 2500);
   });
 
   const calcTotal = () => {
@@ -2950,12 +2971,36 @@ async function postRenderPengaturan() {
       'Reset Data'
     );
 
-    if (confirmed) {
-      await supabaseClient.from('transactions').delete().eq('user_id', currentUserId);
-      await supabaseClient.from('budgets').delete().eq('user_id', currentUserId);
-      await supabaseClient.from('balances').delete().eq('user_id', currentUserId);
+    if (!confirmed) return;
 
+    // Cegah klik ganda selama proses reset berlangsung
+    const originalHtml = resetBtn.innerHTML;
+    resetBtn.disabled = true;
+    resetBtn.innerHTML = '<i data-lucide="loader" style="width: 14px; height: 14px;"></i> Mereset...';
+    lucide.createIcons();
+
+    try {
+      const results = await Promise.all([
+        supabaseClient.from('transactions').delete().eq('user_id', currentUserId),
+        supabaseClient.from('budgets').delete().eq('user_id', currentUserId),
+        supabaseClient.from('balances').delete().eq('user_id', currentUserId),
+      ]);
+      const failed = results.find(r => r && r.error);
+      if (failed) throw failed.error;
+
+      // Bersihkan juga data legacy localStorage agar tidak "hidup lagi" lewat migrasi
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(BUDGET_KEY);
+      localStorage.removeItem(BALANCE_KEY);
+
+      alert('Data berhasil direset. Semua transaksi, budget, dan saldo awal telah dihapus.');
       await setView('dashboard');
+    } catch (e) {
+      console.error('[resetData]', e);
+      alert('Reset data gagal: ' + (e && e.message ? e.message : 'terjadi kesalahan tak terduga') + '\n\nData Anda tidak berubah.');
+      resetBtn.disabled = false;
+      resetBtn.innerHTML = originalHtml;
+      lucide.createIcons();
     }
   });
 
@@ -3054,12 +3099,27 @@ async function runMigration() {
 
     if (oldBalance && balanceCount === 0) {
       const parsed = JSON.parse(oldBalance);
+
+      // Fallback: pakai tanggal transaksi legacy paling awal agar saldo lama tetap utuh
+      let fallbackDate = getFirstDayOfActiveMonth();
+      if (oldExpenses) {
+        try {
+          const legacyTxs = JSON.parse(oldExpenses);
+          if (Array.isArray(legacyTxs)) {
+            const dates = legacyTxs.map(t => t.date).filter(Boolean).sort();
+            if (dates.length) fallbackDate = dates[0];
+          }
+        } catch (legacyErr) {
+          console.warn('[Migration] transaksi legacy gagal dibaca untuk fallback tanggal:', legacyErr);
+        }
+      }
+
       const { error } = await supabaseClient.from('balances').insert({
         user_id:        currentUserId,
         initial_dompet: parsed.initialDompet || 0,
         initial_atm:    parsed.initialATM    || 0,
         initial_ewallet: parsed.initialEWallet || 0,
-        initial_date:   parsed.initialDate   || '2026-05-01',
+        initial_date:   parsed.initialDate   || fallbackDate,
       });
       if (error) throw error;
       localStorage.removeItem(BALANCE_KEY);
@@ -3137,12 +3197,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     setView(activeTab);
   });
 
-  // 4. Month selector
+  // 4. Month & Year selectors — opsi dibuat dinamis agar tidak pernah basi/tahun terkunci
   const monthSelector = document.getElementById('month-selector');
   if (monthSelector) {
+    monthSelector.innerHTML = MONTH_NAMES
+      .map((name, idx) => `<option value="${idx + 1}">${name}</option>`)
+      .join('');
     monthSelector.value = currentMonth;
     monthSelector.addEventListener('change', async (e) => {
       currentMonth = parseInt(e.target.value);
+      const activeTab = document.querySelector('.nav-item.active')?.getAttribute('data-tab') || 'dashboard';
+      await setView(activeTab);
+    });
+  }
+
+  const yearSelector = document.getElementById('year-selector');
+  if (yearSelector) {
+    const realYear = new Date().getFullYear();
+    const yearOptions = [];
+    for (let y = realYear + 1; y >= realYear - 5; y--) yearOptions.push(y);
+    yearSelector.innerHTML = yearOptions
+      .map(y => `<option value="${y}">${y}</option>`)
+      .join('');
+    yearSelector.value = currentYear;
+    yearSelector.addEventListener('change', async (e) => {
+      currentYear = parseInt(e.target.value);
       const activeTab = document.querySelector('.nav-item.active')?.getAttribute('data-tab') || 'dashboard';
       await setView(activeTab);
     });
@@ -3200,7 +3279,7 @@ async function exportToExcel(year, month) {
   // 2. SHEET 1: COVER
   const aoa_cover = Array.from({ length: 35 }, () => Array(10).fill(""));
   aoa_cover[1][1] = "MANAJEMEN KEUANGAN PRIBADI"; // B2
-  aoa_cover[2][1] = `Laporan Keuangan Bulanan - ${monthName} 2026`; // B3
+  aoa_cover[2][1] = `Laporan Keuangan Bulanan - ${monthName} ${year}`; // B3
   aoa_cover[4][1] = "Catat setiap transaksi harian (pengeluaran, pemasukan, dan transfer saldo) untuk memantau saldo Dompet & ATM secara real-time."; // B5
 
   aoa_cover[8][1] = "Fitur Utama:"; // B9
@@ -3568,7 +3647,7 @@ async function exportToExcel(year, month) {
 
 
   // 8. WRITE FILE & DOWNLOAD
-  XLSX.writeFile(wb, `${monthName} Tracker Managemen.xlsx`);
+  XLSX.writeFile(wb, `${monthName} ${year} - Tracker Manajemen.xlsx`);
 }
 
 
