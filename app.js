@@ -3213,9 +3213,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const yearSelector = document.getElementById('year-selector');
   if (yearSelector) {
+    // Rentang tahun: 2026 (awal data aplikasi) s/d 2030, meluap otomatis mengikuti tahun berjalan
+    const START_YEAR = 2026;
     const realYear = new Date().getFullYear();
+    const endYear = Math.max(2030, realYear + 4);
     const yearOptions = [];
-    for (let y = realYear + 1; y >= realYear - 5; y--) yearOptions.push(y);
+    for (let y = START_YEAR; y <= endYear; y++) yearOptions.push(y);
     yearSelector.innerHTML = yearOptions
       .map(y => `<option value="${y}">${y}</option>`)
       .join('');
