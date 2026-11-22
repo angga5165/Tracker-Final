@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <!-- Custom Stylesheet -->
-  <link rel="stylesheet" href="style.css?v=1.1.0">
+  <link rel="stylesheet" href="style.css?v=1.2.0">
 </head>
 <body>
 
@@ -42,11 +42,6 @@
       <button id="auth-submit-btn" class="btn btn-primary"
               style="width:100%; margin-top:16px; height:42px;"
               onclick="handleAuthSubmit()">Masuk</button>
-
-      <div style="margin-top:16px; text-align:right;">
-        <button class="btn btn-outline" style="font-size:12px;"
-                onclick="handleLogout()">Keluar</button>
-      </div>
     </div>
   </div>
 
@@ -65,7 +60,7 @@
       </div>
 
       <!-- Navigation Links -->
-      <nav class="nav-menu" id="nav-menu">
+      <nav class="nav-menu">
         <div class="nav-item active" data-tab="dashboard">
           <i data-lucide="layout-dashboard" class="nav-icon"></i>
           <span class="nav-text">Dashboard</span>
@@ -90,7 +85,7 @@
 
       <!-- Sidebar Footer -->
       <div class="sidebar-bottom">
-        <div class="nav-item" data-tab="pengaturan" id="nav-settings">
+        <div class="nav-item" data-tab="pengaturan">
           <i data-lucide="settings" class="nav-icon"></i>
           <span class="nav-text">Pengaturan</span>
         </div>
@@ -138,19 +133,19 @@
   <div class="modal-overlay" id="delete-modal">
     <div class="modal-content">
       <div class="modal-header">
-        <h3 class="modal-title">Hapus Pengeluaran</h3>
-        <p class="modal-desc">Apakah Anda yakin ingin menghapus pengeluaran ini? Tindakan ini tidak dapat dibatalkan.</p>
+        <h3 class="modal-title">Hapus Transaksi</h3>
+        <p class="modal-desc">Apakah Anda yakin ingin menghapus transaksi ini? Tindakan ini tidak dapat dibatalkan.</p>
       </div>
       <div class="modal-footer">
         <button class="btn btn-outline" id="delete-cancel-btn">Batal</button>
-        <button class="btn btn-primary" id="delete-confirm-btn" style="background-color: var(--primary);">Hapus</button>
+        <button class="btn btn-primary" id="delete-confirm-btn">Hapus</button>
       </div>
     </div>
   </div>
 
   <!-- 2-Step Verification Modal Dialog -->
   <div class="modal-overlay" id="verification-modal">
-    <div class="modal-content" style="max-width: 400px;">
+    <div class="modal-content">
       <div class="modal-header">
         <h3 class="modal-title" id="verification-title">Konfirmasi Keamanan</h3>
         <p class="modal-desc" id="verification-desc">Tindakan ini memerlukan verifikasi tambahan.</p>
@@ -159,23 +154,23 @@
         <label class="form-label" id="verification-label">Ketik teks berikut untuk melanjutkan:</label>
         <input type="text" id="verification-input" class="form-input" placeholder="" autocomplete="off" style="margin-top: 8px;">
       </div>
-      <div class="modal-footer" style="margin-top: 24px;">
+      <div class="modal-footer">
         <button class="btn btn-outline" id="verification-cancel-btn">Batal</button>
-        <button class="btn btn-primary" id="verification-confirm-btn" style="background-color: var(--primary);" disabled>Konfirmasi</button>
+        <button class="btn btn-primary" id="verification-confirm-btn" disabled>Konfirmasi</button>
       </div>
     </div>
   </div>
 
-  <!-- CDNs for External Libraries -->
+  <!-- CDNs for External Libraries (versi di-pin agar build stabil) -->
   <!-- Chart.js CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.6.1/dist/chart.umd.min.js"></script>
   <!-- Lucide Icons CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/lucide/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@1.77.0/dist/umd/lucide.min.js"></script>
   <!-- SheetJS (xlsx) CDN -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <!-- Supabase JS SDK -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2/dist/umd/supabase.js"></script>
   <!-- Main Application Logic Script -->
-  <script src="app.js?v=1.1.1"></script>
+  <script src="app.js?v=1.2.0"></script>
 </body>
 </html>

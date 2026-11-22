@@ -290,12 +290,6 @@ body {
   gap: 16px;
 }
 
-.month-display {
-  font-size: 14px;
-  color: var(--text-muted);
-  font-weight: 500;
-}
-
 .theme-toggle {
   background: none;
   border: none;
@@ -935,10 +929,6 @@ body {
   border-color: transparent;
 }
 
-.heatmap-cell.active-31 {
-  outline: 2px solid var(--primary);
-}
-
 .heatmap-cell.weekend {
   border-color: rgba(196, 112, 90, 0.2);
 }
@@ -1300,31 +1290,6 @@ body {
 
 .tx-amount.transfer {
   color: #5A8FA8;
-}
-
-/* Transfer Flow styling */
-.transfer-flow {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.transfer-flow .form-group {
-  flex: 1;
-  margin-bottom: 0;
-}
-
-.transfer-arrow {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background-color: var(--bg-hover);
-  color: var(--text-light);
-  margin-top: 22px; /* aligns with inputs when they have labels */
 }
 
 /* Extra classes for categories in list */

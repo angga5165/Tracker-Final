@@ -44,46 +44,61 @@ async function handleAuthSubmit() {
   const password = document.getElementById('auth-password').value;
   const errorEl = document.getElementById('auth-error');
   const submitBtn = document.getElementById('auth-submit-btn');
+  const defaultLabel = _authTab === 'login' ? 'Masuk' : 'Daftar';
 
-  if (errorEl) errorEl.textContent = '';
+  if (errorEl) {
+    errorEl.textContent = '';
+    errorEl.style.color = '#c0392b';
+  }
   if (submitBtn) {
     submitBtn.disabled = true;
     submitBtn.textContent = _authTab === 'login' ? 'Memproses...' : 'Mendaftar...';
   }
 
-  let result;
-  if (_authTab === 'login') {
-    result = await supabaseClient.auth.signInWithPassword({ email, password });
-  } else {
-    result = await supabaseClient.auth.signUp({ email, password });
-  }
-
-  if (submitBtn) {
-    submitBtn.disabled = false;
-    submitBtn.textContent = _authTab === 'login' ? 'Masuk' : 'Daftar';
-  }
-
-  if (result.error) {
-    if (errorEl) errorEl.textContent = result.error.message;
-    return;
-  }
-
-  // signUp with email confirmation required â€” session is null until confirmed
-  if (_authTab === 'register' && !result.data.session) {
-    if (errorEl) {
-      errorEl.style.color = '#27ae60';
-      errorEl.textContent = 'Akun dibuat! Cek email untuk konfirmasi, lalu masuk.';
+  try {
+    if (!email || !password) {
+      throw new Error('Email dan password wajib diisi.');
     }
-    return;
-  }
 
-  // Success â€” onAuthStateChange (added in Task 12) will handle the rest
+    const result = _authTab === 'login'
+      ? await supabaseClient.auth.signInWithPassword({ email, password })
+      : await supabaseClient.auth.signUp({ email, password });
+
+    if (result.error) throw result.error;
+
+    // signUp dengan konfirmasi email — session masih null sampai email dikonfirmasi
+    if (_authTab === 'register' && !result.data.session) {
+      if (errorEl) {
+        errorEl.style.color = '#27ae60';
+        errorEl.textContent = 'Akun dibuat! Cek email untuk konfirmasi, lalu masuk.';
+      }
+    }
+    // Login sukses — onAuthStateChange yang menangani render selanjutnya
+  } catch (err) {
+    console.error('[handleAuthSubmit]', err);
+    if (errorEl) {
+      errorEl.style.color = '#c0392b';
+      errorEl.textContent = (err && err.message) ? err.message : 'Terjadi kesalahan. Silakan coba lagi.';
+    }
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = defaultLabel;
+    }
+  }
 }
 
 async function handleLogout() {
-  await supabaseClient.auth.signOut();
-  currentUserId = null;
-  showAuthScreen();
+  try {
+    const { error } = await supabaseClient.auth.signOut();
+    if (error) throw error;
+  } catch (e) {
+    console.error('[handleLogout]', e);
+    alert('Gagal keluar dari akun: ' + (e && e.message ? e.message : 'terjadi kesalahan') + '\nSesi lokal tetap dibersihkan.');
+  } finally {
+    currentUserId = null;
+    showAuthScreen();
+  }
 }
 
 function showAuthScreen() {
@@ -190,51 +205,7 @@ function getDefaultFormDate() {
   return `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`;
 }
 
-const SAMPLE_DATA = [
-  { date: '2026-05-12', dayName: 'Selasa', category: 'Lainnya', description: 'Parkir UIN', amount: 1000 },
-  { date: '2026-05-12', dayName: 'Selasa', category: 'Makanan', description: 'Nasi Ayam', amount: 13000 },
-  { date: '2026-05-12', dayName: 'Selasa', category: 'Makanan', description: 'Telor Gulung', amount: 5000 },
-  { date: '2026-05-12', dayName: 'Selasa', category: 'Transportasi', description: 'Bensin Migi', amount: 22000 },
-  { date: '2026-05-13', dayName: 'Rabu', category: 'Makanan', description: 'Nasi Kuning + Nasi Ayam + Warteg', amount: 41000 },
-  { date: '2026-05-13', dayName: 'Rabu', category: 'Makanan', description: 'Kopi + Pulpy Orange', amount: 18000 },
-  { date: '2026-05-13', dayName: 'Rabu', category: 'Makanan', description: 'C1000', amount: 8000 },
-  { date: '2026-05-13', dayName: 'Rabu', category: 'Lainnya', description: 'Parkir UIN + PONRAN', amount: 7000 },
-  { date: '2026-05-13', dayName: 'Rabu', category: 'Transportasi', description: 'Bensin', amount: 22000 },
-  { date: '2026-05-14', dayName: 'Kamis', category: 'Makanan', description: 'Nasi Kuning', amount: 12000 },
-  { date: '2026-05-14', dayName: 'Kamis', category: 'Transportasi', description: 'Bensin', amount: 15000 },
-  { date: '2026-05-14', dayName: 'Kamis', category: 'Lainnya', description: 'Parkir Blok M', amount: 6000 },
-  { date: '2026-05-17', dayName: 'Minggu', category: 'Makanan', description: 'Gacoan', amount: 27000 },
-  { date: '2026-05-18', dayName: 'Senin', category: 'Makanan', description: 'Bubur Ayam', amount: 12000 },
-  { date: '2026-05-19', dayName: 'Selasa', category: 'Transportasi', description: 'Bensin', amount: 20000 },
-  { date: '2026-05-19', dayName: 'Selasa', category: 'Hiburan', description: 'Kue', amount: 32500 },
-  { date: '2026-05-19', dayName: 'Selasa', category: 'Hiburan', description: 'Lukis-Lukis', amount: 6000 },
-  { date: '2026-05-19', dayName: 'Selasa', category: 'Makanan', description: 'Nasi Ayam + VIT + Susu', amount: 50000 },
-  { date: '2026-05-19', dayName: 'Selasa', category: 'Lainnya', description: 'Parkir', amount: 6000 },
-  { date: '2026-05-20', dayName: 'Rabu', category: 'Makanan', description: 'Nasi Ayam', amount: 15000 },
-  { date: '2026-05-20', dayName: 'Rabu', category: 'Transportasi', description: 'Bensin', amount: 20000 },
-  { date: '2026-05-20', dayName: 'Rabu', category: 'Lainnya', description: 'Uin Kelawai', amount: 4000 },
-  { date: '2026-05-20', dayName: 'Rabu', category: 'Makanan', description: 'Nasi Ayam Popcorn', amount: 20000 },
-  { date: '2026-05-20', dayName: 'Rabu', category: 'Belanja', description: 'Gunting Kuku', amount: 9000 },
-  { date: '2026-05-22', dayName: 'Jumat', category: 'Transportasi', description: 'Bensin', amount: 10000 },
-  { date: '2026-05-22', dayName: 'Jumat', category: 'Makanan', description: 'Nasi Ayam', amount: 15000 },
-  { date: '2026-05-22', dayName: 'Jumat', category: 'Lainnya', description: 'Parkir', amount: 2000 },
-  { date: '2026-05-23', dayName: 'Sabtu', category: 'Makanan', description: 'Good Day', amount: 4000 },
-  { date: '2026-05-24', dayName: 'Minggu', category: 'Transportasi', description: 'Bensin', amount: 20000 },
-  { date: '2026-05-24', dayName: 'Minggu', category: 'Makanan', description: 'kopi dan susu, nasi ayam', amount: 27000 },
-  { date: '2026-05-24', dayName: 'Minggu', category: 'Lainnya', description: 'parkir', amount: 4000 },
-  { date: '2026-05-24', dayName: 'Minggu', category: 'Makanan', description: 'silverqueen', amount: 20000 },
-  { date: '2026-05-25', dayName: 'Senin', category: 'Makanan', description: 'Nasi Ayam', amount: 35000 },
-  { date: '2026-05-25', dayName: 'Senin', category: 'Transportasi', description: 'Bensin', amount: 10000 },
-  { date: '2026-05-25', dayName: 'Senin', category: 'Lainnya', description: 'parkir', amount: 4000 },
-  { date: '2026-05-26', dayName: 'Selasa', category: 'Makanan', description: 'Nasi Ayam', amount: 15000 },
-  { date: '2026-05-26', dayName: 'Selasa', category: 'Transportasi', description: 'Bensin', amount: 10000 },
-  { date: '2026-05-26', dayName: 'Selasa', category: 'Lainnya', description: 'Mila', amount: 50000 },
-  { date: '2026-05-26', dayName: 'Selasa', category: 'Makanan', description: 'es teh', amount: 10000 },
-  { date: '2026-05-31', dayName: 'Minggu', category: 'Transportasi', description: 'Bensin', amount: 20000 },
-];
-
 const DEFAULT_BUDGET = {
-  month: '2026-05',
   categories: {
     Makanan: 300000,
     Transportasi: 300000,
@@ -268,6 +239,75 @@ function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).substring(2);
 }
 
+// --- HTML ESCAPING (anti-XSS untuk teks yang berasal dari pengguna) ---
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  }[ch]));
+}
+
+// Pilih akun alternatif agar sumber & tujuan transfer tidak pernah sama
+function pickAlternateAccount(current) {
+  if (current === 'Dompet') return 'ATM';
+  if (current === 'ATM') return 'E-Wallet';
+  return 'ATM';
+}
+
+function syncTransferTargets(sourceEl, targetEl) {
+  if (!sourceEl || !targetEl) return;
+  if (sourceEl.value === targetEl.value) {
+    targetEl.value = pickAlternateAccount(sourceEl.value);
+  }
+}
+
+// --- PEMETAAN KOLOM DATABASE <-> OBJEK JS (satu sumber kebenaran) ---
+const TX_FIELD_MAP = {
+  date: 'date',
+  dayName: 'day_name',
+  category: 'category',
+  description: 'description',
+  amount: 'amount',
+  type: 'type',
+  source: 'source',
+  transferTo: 'transfer_to',
+  incomeCategory: 'income_category',
+};
+
+function toDbRow(e) {
+  return {
+    id:              e.id,
+    user_id:         currentUserId,
+    date:            e.date,
+    day_name:        e.dayName        || '',
+    category:        e.category       || '',
+    description:     e.description    || '',
+    amount:          e.amount         || 0,
+    type:            e.type           || 'expense',
+    source:          e.source         || 'Dompet',
+    transfer_to:     e.transferTo     || null,
+    income_category: e.incomeCategory || null,
+  };
+}
+
+function fromDbRow(row) {
+  return {
+    id:             row.id,
+    date:           row.date,
+    dayName:        row.day_name,
+    category:       row.category,
+    description:    row.description,
+    amount:         row.amount,
+    type:           row.type,
+    source:         row.source,
+    transferTo:     row.transfer_to,
+    incomeCategory: row.income_category,
+  };
+}
+
 async function loadExpenses() {
   try {
     const { data, error } = await supabaseClient
@@ -278,33 +318,15 @@ async function loadExpenses() {
 
     if (error) throw error;
 
-    // Map snake_case DB columns â†’ camelCase JS fields
-    // Also ensure backward-compat fields type and source exist
     let needsMigration = false;
     const updated = (data || []).map(row => {
-      const item = {
-        id:             row.id,
-        date:           row.date,
-        dayName:        row.day_name,
-        category:       row.category,
-        description:    row.description,
-        amount:         row.amount,
-        type:           row.type,
-        source:         row.source,
-        transferTo:     row.transfer_to,
-        incomeCategory: row.income_category,
-      };
+      const item = fromDbRow(row);
       if (!item.type)   { item.type   = 'expense'; needsMigration = true; }
       if (!item.source) { item.source = 'Dompet';  needsMigration = true; }
       return item;
     });
 
     if (needsMigration) await saveExpenses(updated);
-
-    // New user with no data â€” seed with SAMPLE_DATA
-    if (updated.length === 0) {
-      return [];
-    }
 
     return updated;
   } catch (e) {
@@ -316,19 +338,7 @@ async function loadExpenses() {
 async function saveExpenses(expenses) {
   try {
     if (!expenses || expenses.length === 0) return;
-    const rows = expenses.map(e => ({
-      id:              e.id,
-      user_id:         currentUserId,
-      date:            e.date,
-      day_name:        e.dayName        || '',
-      category:        e.category       || '',
-      description:     e.description    || '',
-      amount:          e.amount         || 0,
-      type:            e.type           || 'expense',
-      source:          e.source         || 'Dompet',
-      transfer_to:     e.transferTo     || null,
-      income_category: e.incomeCategory || null,
-    }));
+    const rows = expenses.map(toDbRow);
     const { error } = await supabaseClient
       .from('transactions')
       .upsert(rows, { onConflict: 'id' });
@@ -341,20 +351,7 @@ async function saveExpenses(expenses) {
 async function addExpense(entry) {
   try {
     const newEntry = { ...entry, id: generateId() };
-    const row = {
-      id:              newEntry.id,
-      user_id:         currentUserId,
-      date:            newEntry.date,
-      day_name:        newEntry.dayName        || '',
-      category:        newEntry.category       || '',
-      description:     newEntry.description    || '',
-      amount:          newEntry.amount         || 0,
-      type:            newEntry.type           || 'expense',
-      source:          newEntry.source         || 'Dompet',
-      transfer_to:     newEntry.transferTo     || null,
-      income_category: newEntry.incomeCategory || null,
-    };
-    const { error } = await supabaseClient.from('transactions').insert(row);
+    const { error } = await supabaseClient.from('transactions').insert(toDbRow(newEntry));
     if (error) throw error;
     return newEntry;
   } catch (e) {
@@ -367,15 +364,9 @@ async function updateExpense(id, updates) {
   try {
     // Map camelCase JS fields â†’ snake_case DB columns
     const dbUpdates = {};
-    if (updates.date            !== undefined) dbUpdates.date            = updates.date;
-    if (updates.dayName         !== undefined) dbUpdates.day_name        = updates.dayName;
-    if (updates.category        !== undefined) dbUpdates.category        = updates.category;
-    if (updates.description     !== undefined) dbUpdates.description     = updates.description;
-    if (updates.amount          !== undefined) dbUpdates.amount          = updates.amount;
-    if (updates.type            !== undefined) dbUpdates.type            = updates.type;
-    if (updates.source          !== undefined) dbUpdates.source          = updates.source;
-    if (updates.transferTo      !== undefined) dbUpdates.transfer_to     = updates.transferTo;
-    if (updates.incomeCategory  !== undefined) dbUpdates.income_category = updates.incomeCategory;
+    Object.entries(TX_FIELD_MAP).forEach(([jsKey, dbKey]) => {
+      if (updates[jsKey] !== undefined) dbUpdates[dbKey] = updates[jsKey];
+    });
 
     const { data, error } = await supabaseClient
       .from('transactions')
@@ -388,18 +379,7 @@ async function updateExpense(id, updates) {
     if (error) throw error;
     if (!data) return null;
 
-    return {
-      id:             data.id,
-      date:           data.date,
-      dayName:        data.day_name,
-      category:       data.category,
-      description:    data.description,
-      amount:         data.amount,
-      type:           data.type,
-      source:         data.source,
-      transferTo:     data.transfer_to,
-      incomeCategory: data.income_category,
-    };
+    return fromDbRow(data);
   } catch (e) {
     console.error('[updateExpense]', e);
     return null;
@@ -705,11 +685,6 @@ function formatRupiah(amount) {
   return `Rp ${amount.toLocaleString('id-ID')}`;
 }
 
-async function getExpensesByDate(date) {
-  const expenses = await loadExpenses();
-  return expenses.filter(e => e.date === date);
-}
-
 async function getMonthTotal(year, month) {
   const monthStr = `${year}-${String(month).padStart(2, '0')}`;
   const expenses = await loadExpenses();
@@ -761,6 +736,105 @@ function getChartColors() {
     tooltipBg: '#3D352E',
     tooltipText: '#F7F5F3',
   };
+}
+
+// --- CHART BUILDERS (dipakai bersama Dashboard & Visualisasi) ---
+function buildTrendBarConfig(chartData, themeColors) {
+  return {
+    type: 'bar',
+    data: {
+      labels: chartData.map(d => parseInt(d.date.split('-')[2])),
+      datasets: [{
+        data: chartData.map(d => d.total),
+        backgroundColor: chartData.map(d => d.isWeekend ? '#A85D4A' : '#C4705A'),
+        borderRadius: 4,
+        maxBarThickness: 16,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: themeColors.tooltipBg,
+          titleColor: themeColors.tooltipText,
+          bodyColor: themeColors.tooltipText,
+          titleFont: { family: 'Inter', size: 12 },
+          bodyFont: { family: 'Inter', size: 12 },
+          padding: 8,
+          displayColors: false,
+          callbacks: {
+            label: context => 'Total: ' + formatRupiah(context.parsed.y),
+            title: context => {
+              const day = chartData[context[0].dataIndex];
+              return `Tanggal ${parseInt(day.date.split('-')[2])} (${day.dayName})`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { color: themeColors.text, font: { family: 'Inter', size: 11 } },
+        },
+        y: {
+          grid: { color: themeColors.grid },
+          ticks: {
+            color: themeColors.text,
+            font: { family: 'Inter', size: 10 },
+            callback: value => 'Rp ' + (value / 1000) + 'k',
+          },
+        },
+      },
+    },
+  };
+}
+
+function buildDonutConfig(categoryData, themeColors) {
+  return {
+    type: 'doughnut',
+    data: {
+      labels: categoryData.map(c => c.category),
+      datasets: [{
+        data: categoryData.map(c => c.total),
+        backgroundColor: categoryData.map(c => CategoryColors[c.category]),
+        borderWidth: 0,
+        cutout: '72%',
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: themeColors.tooltipBg,
+          bodyColor: themeColors.tooltipText,
+          bodyFont: { family: 'Inter', size: 12 },
+          padding: 8,
+          callbacks: {
+            label: context => ` ${context.label}: ${formatRupiah(context.parsed)}`,
+          },
+        },
+      },
+    },
+  };
+}
+
+function renderDonutLegend(elementId, categoryData, total) {
+  const legendEl = document.getElementById(elementId);
+  if (!legendEl) return;
+  legendEl.innerHTML = categoryData.map(c => {
+    const pct = total > 0 ? ((c.total / total) * 100).toFixed(1) : 0;
+    return `
+      <div class="legend-item">
+        <span class="category-dot dot-${escapeHtml(c.category)}"></span>
+        <span>${escapeHtml(c.category)}</span>
+        <span style="font-weight: 500; opacity: 0.8;">${pct}%</span>
+      </div>
+    `;
+  }).join('');
 }
 
 // --- DYNAMIC VIEW RENDERING ---
@@ -845,7 +919,7 @@ async function doSetView(viewName) {
           Aplikasi gagal memuat data. Sesi Anda mungkin telah kedaluwarsa secara paksa di server, atau terdapat kendala koneksi database.
         </p>
         <div style="background: rgba(192, 57, 43, 0.05); color: #c0392b; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 11px; text-align: left; margin-bottom: 24px; word-break: break-all;">
-          Detail: ${error.message || error}
+          Detail: ${escapeHtml(error.message || error)}
         </div>
         <div style="display: flex; gap: 12px; justify-content: center;">
           <button class="btn btn-outline" onclick="location.reload()" style="flex: 1; font-size: 13px;">Muat Ulang</button>
@@ -939,10 +1013,10 @@ async function viewDashboard() {
       return `
         <div class="tx-row" style="padding: 10px 12px; border-radius: var(--radius-sm);">
           <div class="tx-info">
-            <div class="category-dot dot-${dotClass}"></div>
+            <div class="category-dot dot-${escapeHtml(dotClass)}"></div>
             <div class="tx-details">
-              <p class="tx-desc" style="font-size: 13px;">${tx.description}</p>
-              <p class="tx-meta">${tx.dayName}, ${parseInt(tx.date.split('-')[2])} ${MONTH_NAMES[currentMonth - 1]} • ${subtitle}</p>
+              <p class="tx-desc" style="font-size: 13px;">${escapeHtml(tx.description)}</p>
+              <p class="tx-meta">${escapeHtml(tx.dayName)}, ${parseInt(tx.date.split('-')[2])} ${MONTH_NAMES[currentMonth - 1]} • ${escapeHtml(subtitle)}</p>
             </div>
           </div>
           <span class="tx-amount ${typeClass}" style="font-size: 13px; font-weight: 600;">${sign}${formatRupiah(tx.amount)}</span>
@@ -959,11 +1033,9 @@ async function viewDashboard() {
 
   // 1. Dominasi Pengeluaran — kategori dengan total pengeluaran terbesar
   const catTotals = {};
-  const catCounts = {};
   monthExpenses.forEach(e => {
     const cat = e.category || 'Lainnya';
     catTotals[cat] = (catTotals[cat] || 0) + (e.amount || 0);
-    catCounts[cat] = (catCounts[cat] || 0) + 1;
   });
   let dominantCat = null;
   let dominantTotal = 0;
@@ -1357,62 +1429,7 @@ async function postRenderDashboard() {
   const trendCtx = document.getElementById('dashboard-trend-chart')?.getContext('2d');
   if (trendCtx) {
     destroyChart('trend');
-    
-    const labels = chartData.map(d => parseInt(d.date.split('-')[2]));
-    const values = chartData.map(d => d.total);
-    const bgColors = chartData.map(d => d.isWeekend ? '#A85D4A' : '#C4705A');
-
-    activeCharts['trend'] = new Chart(trendCtx, {
-      type: 'bar',
-      data: {
-        labels: labels,
-        datasets: [{
-          data: values,
-          backgroundColor: bgColors,
-          borderRadius: 4,
-          maxBarThickness: 16
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: themeColors.tooltipBg,
-            titleColor: themeColors.tooltipText,
-            bodyColor: themeColors.tooltipText,
-            titleFont: { family: 'Inter', size: 12 },
-            bodyFont: { family: 'Inter', size: 12 },
-            padding: 8,
-            displayColors: false,
-            callbacks: {
-              label: function(context) {
-                return 'Total: ' + formatRupiah(context.parsed.y);
-              },
-              title: function(context) {
-                const dayIndex = chartData[context[0].dataIndex];
-                return `Tanggal ${parseInt(dayIndex.date.split('-')[2])} (${dayIndex.dayName})`;
-              }
-            }
-          }
-        },
-        scales: {
-          x: {
-            grid: { display: false },
-            ticks: { color: themeColors.text, font: { family: 'Inter', size: 11 } }
-          },
-          y: {
-            grid: { color: themeColors.grid },
-            ticks: {
-              color: themeColors.text,
-              font: { family: 'Inter', size: 10 },
-              callback: function(value) { return 'Rp ' + (value / 1000) + 'k'; }
-            }
-          }
-        }
-      }
-    });
+    activeCharts['trend'] = new Chart(trendCtx, buildTrendBarConfig(chartData, themeColors));
   }
 
   // 3. Donut chart
@@ -1420,56 +1437,13 @@ async function postRenderDashboard() {
   if (donutCtx) {
     destroyChart('donut');
     const categoryData = (await getCategoryAnalysis(currentYear, currentMonth)).filter(c => c.total > 0);
-    const labels = categoryData.map(c => c.category);
-    const values = categoryData.map(c => c.total);
-    const colors = categoryData.map(c => CategoryColors[c.category]);
+    activeCharts['donut'] = new Chart(donutCtx, buildDonutConfig(categoryData, themeColors));
 
-    activeCharts['donut'] = new Chart(donutCtx, {
-      type: 'doughnut',
-      data: {
-        labels: labels,
-        datasets: [{
-          data: values,
-          backgroundColor: colors,
-          borderWidth: 0,
-          cutout: '72%'
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: themeColors.tooltipBg,
-            bodyColor: themeColors.tooltipText,
-            bodyFont: { family: 'Inter', size: 12 },
-            padding: 8,
-            callbacks: {
-              label: function(context) {
-                return ` ${context.label}: ${formatRupiah(context.parsed)}`;
-              }
-            }
-          }
-        }
-      }
-    });
-
-    // Populate legend
-    const legendEl = document.getElementById('dashboard-donut-legend');
-    if (legendEl) {
-      const monthTotal = await getMonthTotal(currentYear, currentMonth);
-      legendEl.innerHTML = categoryData.map(c => {
-        const pct = monthTotal > 0 ? ((c.total / monthTotal) * 100).toFixed(1) : 0;
-        return `
-          <div class="legend-item">
-            <span class="category-dot dot-${c.category}"></span>
-            <span>${c.category}</span>
-            <span style="font-weight: 500; opacity: 0.8;">${pct}%</span>
-          </div>
-        `;
-      }).join('');
-    }
+    renderDonutLegend(
+      'dashboard-donut-legend',
+      categoryData,
+      await getMonthTotal(currentYear, currentMonth)
+    );
   }
 }
 
@@ -1498,7 +1472,7 @@ function viewInputHarian() {
             <button type="button" class="type-btn" id="type-btn-transfer" data-type="transfer">🔄 Transfer</button>
           </div>
 
-          <form id="expense-form" class="space-y-4" style="margin-top: 16px;">
+          <form id="expense-form" style="margin-top: 16px;">
             
             <div class="form-group">
               <label class="form-label">Tanggal</label>
@@ -1651,16 +1625,8 @@ async function postRenderInputHarian() {
         if (submitBtn) {
           submitBtn.innerHTML = '<i data-lucide="arrow-left-right" style="width: 16px; height: 16px;"></i> Transfer Dana';
         }
-        // Auto sync so they are not the same
-        if (sourceSelect && transferToSelect && sourceSelect.value === transferToSelect.value) {
-          if (sourceSelect.value === 'Dompet') {
-            transferToSelect.value = 'ATM';
-          } else if (sourceSelect.value === 'ATM') {
-            transferToSelect.value = 'E-Wallet';
-          } else {
-            transferToSelect.value = 'ATM';
-          }
-        }
+        // Pastikan tujuan transfer tidak sama dengan sumber
+        syncTransferTargets(sourceSelect, transferToSelect);
       }
       lucide.createIcons();
     });
@@ -1669,33 +1635,13 @@ async function postRenderInputHarian() {
   // Transfer source/destination auto-sync
   const sourceSelect = document.getElementById('form-source');
   const transferToSelect = document.getElementById('form-transfer-to');
-  sourceSelect?.addEventListener('change', (e) => {
+  sourceSelect?.addEventListener('change', () => {
     const activeType = document.querySelector('.type-btn.active')?.getAttribute('data-type');
-    if (activeType === 'transfer' && transferToSelect) {
-      if (e.target.value === transferToSelect.value) {
-        if (e.target.value === 'Dompet') {
-          transferToSelect.value = 'ATM';
-        } else if (e.target.value === 'ATM') {
-          transferToSelect.value = 'E-Wallet';
-        } else {
-          transferToSelect.value = 'ATM';
-        }
-      }
-    }
+    if (activeType === 'transfer') syncTransferTargets(sourceSelect, transferToSelect);
   });
-  transferToSelect?.addEventListener('change', (e) => {
+  transferToSelect?.addEventListener('change', () => {
     const activeType = document.querySelector('.type-btn.active')?.getAttribute('data-type');
-    if (activeType === 'transfer' && sourceSelect) {
-      if (e.target.value === sourceSelect.value) {
-        if (e.target.value === 'Dompet') {
-          sourceSelect.value = 'ATM';
-        } else if (e.target.value === 'ATM') {
-          sourceSelect.value = 'E-Wallet';
-        } else {
-          sourceSelect.value = 'ATM';
-        }
-      }
-    }
+    if (activeType === 'transfer') syncTransferTargets(transferToSelect, sourceSelect);
   });
 
   // Render expenses list
@@ -1793,10 +1739,38 @@ async function postRenderInputHarian() {
 let inlineEditingId = null;
 let inlineEditData = { category: '', description: '', amount: '' };
 
+// Delegated click handler untuk tombol aksi di daftar transaksi.
+// Menghindari inline onclick yang rawan injeksi lewat deskripsi pengguna.
+function handleTransactionListAction(event) {
+  const btn = event.target.closest('[data-action]');
+  if (!btn) return;
+
+  const { action, id } = btn.dataset;
+  if (action === 'edit') {
+    startInlineEdit(
+      id,
+      btn.dataset.category || '',
+      btn.dataset.description || '',
+      Number(btn.dataset.amount) || 0
+    );
+  } else if (action === 'save') {
+    saveInlineEdit(id);
+  } else if (action === 'cancel') {
+    cancelInlineEdit();
+  } else if (action === 'delete') {
+    triggerDelete(id);
+  }
+}
+
 async function renderExpensesList() {
   const expenses = await loadExpenses();
   const container = document.getElementById('transaction-list-card');
   if (!container) return;
+
+  if (!container.dataset.actionsBound) {
+    container.dataset.actionsBound = '1';
+    container.addEventListener('click', handleTransactionListAction);
+  }
 
   const activeMonthStr = getActiveMonthStr();
   const monthExpenses = expenses.filter(e => e.date.startsWith(activeMonthStr));
@@ -1861,15 +1835,15 @@ async function renderExpensesList() {
             <div class="tx-edit-form" style="display: flex; gap: 8px; align-items: center; width: 100%; justify-content: space-between; flex-wrap: wrap;">
               <div style="display: flex; gap: 6px; align-items: center; flex: 1; min-width: 200px;">
                 ${categorySelectHtml}
-                <input type="text" id="edit-desc-${entry.id}" class="form-input" style="height: 32px; font-size: 12px; flex: 1;" value="${inlineEditData.description}">
+                <input type="text" id="edit-desc-${entry.id}" class="form-input" style="height: 32px; font-size: 12px; flex: 1;" value="${escapeHtml(inlineEditData.description)}">
               </div>
               <div style="display: flex; gap: 6px; align-items: center;">
-                <input type="text" id="edit-amount-${entry.id}" class="form-input text-right" style="height: 32px; font-size: 12px; font-family: monospace; width: 90px;" value="${inlineEditData.amount}">
+                <input type="text" id="edit-amount-${entry.id}" class="form-input text-right" style="height: 32px; font-size: 12px; font-family: monospace; width: 90px;" value="${escapeHtml(inlineEditData.amount)}">
                 <div style="display: flex; gap: 4px;">
-                  <button class="action-icon-btn success" onclick="saveInlineEdit('${entry.id}')" title="Save">
+                  <button class="action-icon-btn success" data-action="save" data-id="${escapeHtml(entry.id)}" title="Save">
                     <i data-lucide="check" style="width: 14px; height: 14px;"></i>
                   </button>
-                  <button class="action-icon-btn danger" onclick="cancelInlineEdit()" title="Cancel">
+                  <button class="action-icon-btn danger" data-action="cancel" title="Cancel">
                     <i data-lucide="x" style="width: 14px; height: 14px;"></i>
                   </button>
                 </div>
@@ -1903,18 +1877,21 @@ async function renderExpensesList() {
       return `
         <div class="tx-row">
           <div class="tx-info">
-            <div class="category-dot dot-${dotClass}"></div>
+            <div class="category-dot dot-${escapeHtml(dotClass)}"></div>
             <div class="tx-details">
-              <p class="tx-desc">${entry.description}</p>
-              <p class="tx-meta">${detailsMeta}</p>
+              <p class="tx-desc">${escapeHtml(entry.description)}</p>
+              <p class="tx-meta">${escapeHtml(detailsMeta)}</p>
             </div>
           </div>
           <div class="tx-actions">
             <span class="tx-amount ${typeClass}">${sign}${formatRupiah(entry.amount)}</span>
-            <button class="action-icon-btn" onclick="startInlineEdit('${entry.id}', '${entry.type === 'income' ? entry.incomeCategory : (entry.category || '')}', '${entry.description.replace(/'/g, "\\'")}', ${entry.amount})" title="Edit">
+            <button class="action-icon-btn" data-action="edit" data-id="${escapeHtml(entry.id)}"
+                    data-category="${escapeHtml(entry.type === 'income' ? entry.incomeCategory : (entry.category || ''))}"
+                    data-description="${escapeHtml(entry.description || '')}"
+                    data-amount="${Number(entry.amount) || 0}" title="Edit">
               <i data-lucide="pencil" style="width: 13px; height: 13px;"></i>
             </button>
-            <button class="action-icon-btn danger" onclick="triggerDelete('${entry.id}')" title="Hapus">
+            <button class="action-icon-btn danger" data-action="delete" data-id="${escapeHtml(entry.id)}" title="Hapus">
               <i data-lucide="trash-2" style="width: 13px; height: 13px;"></i>
             </button>
           </div>
@@ -2148,63 +2125,71 @@ async function postRenderRekapHarian() {
     exportBtn.disabled = true;
     exportBtn.innerHTML = 'Mengekspor...';
 
-    const dailyData = await getDailySummaries(currentYear, currentMonth);
+    try {
+      const dailyData = await getDailySummaries(currentYear, currentMonth);
 
-    const catTotals = { Makanan: 0, Transportasi: 0, Belanja: 0, Hiburan: 0, Tagihan: 0, Lainnya: 0 };
-    let grandTotal = 0;
+      const catTotals = { Makanan: 0, Transportasi: 0, Belanja: 0, Hiburan: 0, Tagihan: 0, Lainnya: 0 };
+      let grandTotal = 0;
 
-    dailyData.forEach(d => {
-      CategoryLabels.forEach(cat => {
-        catTotals[cat] += d.categories[cat] || 0;
+      dailyData.forEach(d => {
+        CategoryLabels.forEach(cat => {
+          catTotals[cat] += d.categories[cat] || 0;
+        });
+        grandTotal += d.total;
       });
-      grandTotal += d.total;
-    });
 
-    const activeDays = dailyData.filter(d => d.total > 0).length || 1;
-    const averages = {};
-    CategoryLabels.forEach(cat => {
-      averages[cat] = Math.round(catTotals[cat] / activeDays);
-    });
-    const avgTotal = Math.round(grandTotal / activeDays);
+      const activeDays = dailyData.filter(d => d.total > 0).length || 1;
+      const averages = {};
+      CategoryLabels.forEach(cat => {
+        averages[cat] = Math.round(catTotals[cat] / activeDays);
+      });
+      const avgTotal = Math.round(grandTotal / activeDays);
 
-    const headers = ['Tanggal', 'Hari', ...CategoryLabels, 'Total Harian'];
-    const rows = dailyData.map(d => [
-      parseInt(d.date.split('-')[2]),
-      d.dayName,
-      ...CategoryLabels.map(cat => d.categories[cat] || ''),
-      d.total || ''
-    ]);
+      const headers = ['Tanggal', 'Hari', ...CategoryLabels, 'Total Harian'];
+      const rows = dailyData.map(d => [
+        parseInt(d.date.split('-')[2]),
+        d.dayName,
+        ...CategoryLabels.map(cat => d.categories[cat] || ''),
+        d.total || ''
+      ]);
 
-    const totalRow = [
-      'TOTAL', '',
-      ...CategoryLabels.map(cat => catTotals[cat]),
-      grandTotal
-    ];
+      const totalRow = [
+        'TOTAL', '',
+        ...CategoryLabels.map(cat => catTotals[cat]),
+        grandTotal
+      ];
 
-    const avgRow = [
-      'RATA-RATA', '',
-      ...CategoryLabels.map(cat => averages[cat]),
-      avgTotal
-    ];
+      const avgRow = [
+        'RATA-RATA', '',
+        ...CategoryLabels.map(cat => averages[cat]),
+        avgTotal
+      ];
 
-    const csvContent = [headers, ...rows, totalRow, avgRow]
-      .map(row => row.map(cell => `"${cell}"`).join(','))
-      .join('\n');
+      // Escape sel CSV dengan benar (kutip ganda digandakan)
+      const csvCell = cell => `"${String(cell ?? '').replace(/"/g, '""')}"`;
+      const csvContent = [headers, ...rows, totalRow, avgRow]
+        .map(row => row.map(csvCell).join(','))
+        .join('\r\n');
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    const monthNameLower = MONTH_NAMES[currentMonth - 1].toLowerCase();
-    link.download = `rekap-harian-${monthNameLower}-${currentYear}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-
-    setTimeout(() => {
+      // BOM UTF-8 agar Excel membaca karakter Indonesia dengan benar
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const monthNameLower = MONTH_NAMES[currentMonth - 1].toLowerCase();
+      link.download = `rekap-harian-${monthNameLower}-${currentYear}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('[exportCSV]', err);
+      alert('Gagal mengekspor CSV: ' + (err && err.message ? err.message : 'terjadi kesalahan tak terduga'));
+    } finally {
       exportBtn.disabled = false;
       exportBtn.innerHTML = '<i data-lucide="download" style="width: 14px; height: 14px;"></i> Export CSV';
       lucide.createIcons();
-    }, 800);
+    }
   });
 
   const exportXlsxBtn = document.getElementById('export-xlsx-btn');
@@ -2215,12 +2200,13 @@ async function postRenderRekapHarian() {
     try {
       await exportToExcel(currentYear, currentMonth);
     } catch (err) {
-      console.error(err);
-      alert('Gagal mendownload file Excel');
+      console.error('[exportExcel]', err);
+      alert('Gagal mendownload file Excel: ' + (err && err.message ? err.message : 'terjadi kesalahan tak terduga'));
+    } finally {
+      exportXlsxBtn.disabled = false;
+      exportXlsxBtn.innerHTML = '<i data-lucide="file-spreadsheet" style="width: 14px; height: 14px;"></i> Download Excel (.xlsx)';
+      lucide.createIcons();
     }
-    exportXlsxBtn.disabled = false;
-    exportXlsxBtn.innerHTML = '<i data-lucide="file-spreadsheet" style="width: 14px; height: 14px;"></i> Download Excel (.xlsx)';
-    lucide.createIcons();
   });
 }
 
@@ -2554,60 +2540,7 @@ async function postRenderVisualisasi() {
   const trendCtx = document.getElementById('vis-trend-chart')?.getContext('2d');
   if (trendCtx) {
     destroyChart('visTrend');
-    
-    const labels = chartData.map(d => parseInt(d.date.split('-')[2]));
-    const values = chartData.map(d => d.total);
-    const bgColors = chartData.map(d => d.isWeekend ? '#A85D4A' : '#C4705A');
-
-    activeCharts['visTrend'] = new Chart(trendCtx, {
-      type: 'bar',
-      data: {
-        labels: labels,
-        datasets: [{
-          data: values,
-          backgroundColor: bgColors,
-          borderRadius: 4,
-          maxBarThickness: 16
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: themeColors.tooltipBg,
-            titleColor: themeColors.tooltipText,
-            bodyColor: themeColors.tooltipText,
-            titleFont: { family: 'Inter', size: 12 },
-            bodyFont: { family: 'Inter', size: 12 },
-            padding: 8,
-            displayColors: false,
-            callbacks: {
-              label: function(context) { return 'Total: ' + formatRupiah(context.parsed.y); },
-              title: function(context) {
-                const day = chartData[context[0].dataIndex];
-                return `Tanggal ${parseInt(day.date.split('-')[2])} (${day.dayName})`;
-              }
-            }
-          }
-        },
-        scales: {
-          x: {
-            grid: { display: false },
-            ticks: { color: themeColors.text, font: { family: 'Inter', size: 11 } }
-          },
-          y: {
-            grid: { color: themeColors.grid },
-            ticks: {
-              color: themeColors.text,
-              font: { family: 'Inter', size: 10 },
-              callback: function(value) { return 'Rp ' + (value / 1000) + 'k'; }
-            }
-          }
-        }
-      }
-    });
+    activeCharts['visTrend'] = new Chart(trendCtx, buildTrendBarConfig(chartData, themeColors));
   }
 
   // 2. Donut chart
@@ -2615,53 +2548,8 @@ async function postRenderVisualisasi() {
   if (donutCtx) {
     destroyChart('visDonut');
     const filteredCategories = categoryData.filter(c => c.total > 0);
-    const labels = filteredCategories.map(c => c.category);
-    const values = filteredCategories.map(c => c.total);
-    const colors = filteredCategories.map(c => CategoryColors[c.category]);
-
-    activeCharts['visDonut'] = new Chart(donutCtx, {
-      type: 'doughnut',
-      data: {
-        labels: labels,
-        datasets: [{
-          data: values,
-          backgroundColor: colors,
-          borderWidth: 0,
-          cutout: '72%'
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: themeColors.tooltipBg,
-            bodyColor: themeColors.tooltipText,
-            bodyFont: { family: 'Inter', size: 12 },
-            padding: 8,
-            callbacks: {
-              label: function(context) { return ` ${context.label}: ${formatRupiah(context.parsed)}`; }
-            }
-          }
-        }
-      }
-    });
-
-    // Populate legend
-    const legendEl = document.getElementById('vis-donut-legend');
-    if (legendEl) {
-      legendEl.innerHTML = filteredCategories.map(c => {
-        const pct = monthTotal > 0 ? ((c.total / monthTotal) * 100).toFixed(1) : 0;
-        return `
-          <div class="legend-item">
-            <span class="category-dot dot-${c.category}"></span>
-            <span>${c.category}</span>
-            <span style="font-weight: 500; opacity: 0.8;">${pct}%</span>
-          </div>
-        `;
-      }).join('');
-    }
+    activeCharts['visDonut'] = new Chart(donutCtx, buildDonutConfig(filteredCategories, themeColors));
+    renderDonutLegend('vis-donut-legend', filteredCategories, monthTotal);
   }
 
   // 3. Budget vs Actual Horizontal Bar Chart
@@ -3300,7 +3188,7 @@ async function exportToExcel(year, month) {
   aoa_cover[20][1] = "Rekap Harian"; aoa_cover[20][2] = "Ringkasan total pengeluaran harian per kategori"; // B21, C21
   aoa_cover[21][1] = "Analisis Kategori"; aoa_cover[21][2] = "Analisis budget vs pengeluaran aktual per kategori"; // B22, C22
   aoa_cover[22][1] = "Arus Kas"; aoa_cover[22][2] = "Laporan mutasi saldo Dompet & ATM"; // B23, C23
-  aoa_cover[23][1] = "Grafik"; aoa_cover[23][2] = "Visualisasi data trend pengeluaran"; // B24, C24
+  aoa_cover[23][1] = "Data Harian"; aoa_cover[23][2] = "Data harian & analisis kategori (sumber grafik)"; // B24, C24
 
   aoa_cover[25][1] = "Tips Penggunaan:"; // B26
   aoa_cover[26][1] = "1. Buka sheet 'Input Harian' dan catat setiap transaksi dengan tipe yang sesuai"; // B27
@@ -3313,11 +3201,31 @@ async function exportToExcel(year, month) {
   XLSX.utils.book_append_sheet(wb, ws_cover, "Cover");
 
   // 3. SHEET 2: INPUT HARIAN
-  const aoa_input = [];
-  const totalInputRows = 5 + daysInMonth * 5 + 2;
-  for (let r = 0; r < totalInputRows; r++) {
-    aoa_input.push(Array(10).fill(""));
+  // Setiap hari mendapat jumlah slot sesuai banyaknya transaksi (minimal 1),
+  // sehingga tidak ada transaksi yang terpotong atau baris kosong berlebihan.
+  const expenses = await loadExpenses();
+  const monthTransactions = expenses.filter(e => e.date.startsWith(activeMonthStr));
+
+  const dayLayout = [];
+  let nextRow = 5; // Excel row pertama untuk data (baris 4 = header)
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const dateObj = new Date(year, month - 1, d);
+    const dayTransactions = monthTransactions.filter(e => e.date === dateStr);
+    const slotCount = Math.max(1, dayTransactions.length);
+
+    dayLayout.push({
+      day: d,
+      dayName: DAY_NAMES[dateObj.getDay()],
+      startRow: nextRow,
+      slotCount,
+      dayTransactions,
+    });
+    nextRow += slotCount;
   }
+
+  const totalRow = nextRow; // Excel row untuk TOTAL PENGELUARAN BULANAN
+  const aoa_input = Array.from({ length: totalRow }, () => Array(10).fill(""));
 
   aoa_input[1][1] = `DAFTAR TRANSAKSI HARIAN - ${monthName.toUpperCase()} ${year}`; // B2
   aoa_input[3][1] = "Tanggal"; // B4
@@ -3329,53 +3237,41 @@ async function exportToExcel(year, month) {
   aoa_input[3][7] = "Jumlah (Rp)"; // H4
   aoa_input[3][8] = "Total Pengeluaran Harian"; // I4
 
-  const expenses = await loadExpenses();
-  const monthTransactions = expenses.filter(e => e.date.startsWith(activeMonthStr));
+  dayLayout.forEach(layout => {
+    const { day, dayName, startRow, slotCount, dayTransactions } = layout;
+    const endRow = startRow + slotCount - 1;
 
-  for (let d = 1; d <= daysInMonth; d++) {
-    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-    const dateObj = new Date(year, month - 1, d);
-    const dayName = DAY_NAMES[dateObj.getDay()];
-    
-    const dayTransactions = monthTransactions.filter(e => e.date === dateStr);
-    const startRow = 5 + (d - 1) * 5; // 1-based Row number in Excel
-    
-    aoa_input[startRow - 1][1] = d; // Column B (Tanggal)
+    aoa_input[startRow - 1][1] = day; // Column B (Tanggal)
     aoa_input[startRow - 1][2] = dayName; // Column C (Hari)
-    aoa_input[startRow - 1][8] = { f: `SUMIFS(H${startRow}:H${startRow + 4}, D${startRow}:D${startRow + 4}, "Pengeluaran")` }; // Column I (Total Harian)
+    aoa_input[startRow - 1][8] = { f: `SUMIFS(H${startRow}:H${endRow}, D${startRow}:D${endRow}, "Pengeluaran")` }; // Column I (Total Harian)
 
-    for (let i = 0; i < 5; i++) {
+    dayTransactions.forEach((tx, i) => {
       const txRowIndex = startRow - 1 + i;
-      if (i < dayTransactions.length) {
-        const tx = dayTransactions[i];
-        let tipeText = "Pengeluaran";
-        let kategoriText = tx.category;
+      let tipeText = "Pengeluaran";
+      let kategoriText = tx.category;
 
-        if (tx.type === "income") {
-          tipeText = "Pemasukan";
-          kategoriText = tx.incomeCategory;
-        } else if (tx.type === "transfer") {
-          tipeText = "Transfer";
-          kategoriText = tx.transferTo || (tx.source === "Dompet" ? "ATM" : "Dompet");
-        } else {
-          if (tx.category === "Tagihan") {
-            kategoriText = "Tagihan (Listrik/Air/Internet)";
-          }
-        }
-
-        aoa_input[txRowIndex][3] = tipeText; // Column D (Tipe)
-        aoa_input[txRowIndex][4] = tx.source; // Column E (Sumber)
-        aoa_input[txRowIndex][5] = kategoriText; // Column F (Kategori/Tujuan)
-        aoa_input[txRowIndex][6] = tx.description; // Column G (Keterangan)
-        aoa_input[txRowIndex][7] = tx.amount; // Column H (Jumlah)
+      if (tx.type === "income") {
+        tipeText = "Pemasukan";
+        kategoriText = tx.incomeCategory;
+      } else if (tx.type === "transfer") {
+        tipeText = "Transfer";
+        kategoriText = tx.transferTo || (tx.source === "Dompet" ? "ATM" : "Dompet");
+      } else if (tx.category === "Tagihan") {
+        kategoriText = "Tagihan (Listrik/Air/Internet)";
       }
-    }
-  }
+
+      aoa_input[txRowIndex][3] = tipeText; // Column D (Tipe)
+      aoa_input[txRowIndex][4] = tx.source; // Column E (Sumber)
+      aoa_input[txRowIndex][5] = kategoriText; // Column F (Kategori/Tujuan)
+      aoa_input[txRowIndex][6] = tx.description; // Column G (Keterangan)
+      aoa_input[txRowIndex][7] = tx.amount; // Column H (Jumlah)
+    });
+  });
 
   // Total Bulanan row
-  const totalRowIdx = 4 + daysInMonth * 5;
+  const totalRowIdx = totalRow - 1; // 0-based index
   aoa_input[totalRowIdx][1] = "TOTAL PENGELUARAN BULANAN";
-  aoa_input[totalRowIdx][7] = { f: `SUMIFS(H5:H${totalRowIdx}, D5:D${totalRowIdx}, "Pengeluaran")` };
+  aoa_input[totalRowIdx][7] = { f: `SUMIFS(H5:H${totalRow - 1}, D5:D${totalRow - 1}, "Pengeluaran")` };
 
   const ws_input = XLSX.utils.aoa_to_sheet(aoa_input);
   ws_input['!cols'] = [
@@ -3409,7 +3305,7 @@ async function exportToExcel(year, month) {
   aoa_rekap[3][8] = "Lainnya"; // I4
   aoa_rekap[3][9] = "Total Harian"; // J4
 
-  const inputEndRow = 4 + daysInMonth * 5;
+  const inputEndRow = totalRow - 1; // baris data terakhir di sheet Input Harian
 
   for (let d = 1; d <= daysInMonth; d++) {
     const dayRowIdx = 4 + d; // Excel Row = 5 + (d - 1)
@@ -3644,7 +3540,7 @@ async function exportToExcel(year, month) {
     { wch: 25 }, // E: Kategori
     { wch: 15 }  // F: Total
   ];
-  XLSX.utils.book_append_sheet(wb, ws_grafik, "Grafik");
+  XLSX.utils.book_append_sheet(wb, ws_grafik, "Data Harian");
 
 
 
