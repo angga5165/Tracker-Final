@@ -17,6 +17,130 @@ try {
 // Active user ID â€” set after successful login, null when logged out
 let currentUserId = null;
 
+// --- CACHE TRANSAKSI ---
+// Satu query per render (bukan 10-11x). Cache dibatalkan setiap ada mutasi data.
+let expensesCache = null;
+let expensesCachePromise = null;
+let expensesCacheUserId = null;
+
+function invalidateExpensesCache() {
+  expensesCache = null;
+  expensesCachePromise = null;
+}
+
+// --- TOAST & LOADING INDICATOR ---
+let _loadingCount = 0;
+
+function showLoading() {
+  _loadingCount++;
+  document.getElementById('loading-bar')?.classList.add('active');
+}
+
+function hideLoading() {
+  _loadingCount = Math.max(0, _loadingCount - 1);
+  if (_loadingCount === 0) document.getElementById('loading-bar')?.classList.remove('active');
+}
+
+/**
+ * Menampilkan notifikasi singkat di pojok kanan bawah.
+ * @param {string} message
+ * @param {'success'|'error'|'info'} type
+ */
+function showToast(message, type = 'info', duration = 3500) {
+  const container = document.getElementById('toast-container');
+  if (!container) return;
+
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
+
+  const iconName = type === 'success' ? 'check' : type === 'error' ? 'alert-octagon' : 'info';
+  const icon = document.createElement('i');
+  icon.setAttribute('data-lucide', iconName);
+  icon.className = 'toast-icon';
+
+  const text = document.createElement('span');
+  text.className = 'toast-message';
+  text.textContent = message; // textContent aman dari XSS
+
+  toast.append(icon, text);
+  container.appendChild(toast);
+  if (window.lucide) lucide.createIcons();
+
+  // Tampilkan toast (visibilitas tidak bergantung pada animasi)
+  toast.classList.add('show');
+
+  const remove = () => {
+    toast.classList.add('hide');
+    setTimeout(() => toast.remove(), 250);
+  };
+  const timer = setTimeout(remove, duration);
+  toast.addEventListener('click', () => {
+    clearTimeout(timer);
+    remove();
+  });
+}
+
+// --- MODAL ACCESSIBILITY HELPERS ---
+let _lastFocusedElement = null;
+
+function getFocusable(container) {
+  if (!container) return [];
+  return Array.from(container.querySelectorAll(
+    'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+  )).filter(el => el.offsetParent !== null);
+}
+
+function openModal(modal) {
+  if (!modal) return;
+  _lastFocusedElement = document.activeElement;
+  modal.classList.add('active');
+  modal.setAttribute('aria-hidden', 'false');
+  const focusables = getFocusable(modal);
+  (focusables[0] || modal.querySelector('.modal-content'))?.focus();
+}
+
+function closeModal(modal) {
+  if (!modal) return;
+  modal.classList.remove('active');
+  modal.setAttribute('aria-hidden', 'true');
+  if (_lastFocusedElement && typeof _lastFocusedElement.focus === 'function') {
+    _lastFocusedElement.focus();
+  }
+  _lastFocusedElement = null;
+}
+
+// Esc untuk menutup modal & Tab untuk mengurung fokus di dalam modal
+document.addEventListener('keydown', (e) => {
+  const modal = document.querySelector('.modal-overlay.active');
+  if (!modal) return;
+
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    if (modal.id === 'delete-modal') {
+      document.getElementById('delete-cancel-btn')?.click();
+    } else if (modal.id === 'verification-modal') {
+      document.getElementById('verification-cancel-btn')?.click();
+    }
+    return;
+  }
+
+  if (e.key === 'Tab') {
+    const focusables = getFocusable(modal);
+    if (!focusables.length) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }
+});
+
 // --- AUTH HELPERS ---
 
 let _authTab = 'login'; // 'login' | 'register'
@@ -94,9 +218,10 @@ async function handleLogout() {
     if (error) throw error;
   } catch (e) {
     console.error('[handleLogout]', e);
-    alert('Gagal keluar dari akun: ' + (e && e.message ? e.message : 'terjadi kesalahan') + '\nSesi lokal tetap dibersihkan.');
+    showToast('Gagal keluar dari akun: ' + (e && e.message ? e.message : 'terjadi kesalahan') + ' Sesi lokal tetap dibersihkan.', 'error', 5000);
   } finally {
     currentUserId = null;
+    invalidateExpensesCache();
     showAuthScreen();
   }
 }
@@ -146,7 +271,7 @@ function confirmActionWithText(title, description, requiredText) {
     confirmBtn.disabled = true;
 
     // Menampilkan modal
-    modal.classList.add('active');
+    openModal(modal);
     setTimeout(() => inputEl.focus(), 100);
 
     // Event listener: aktifkan tombol hanya jika input cocok
@@ -159,7 +284,7 @@ function confirmActionWithText(title, description, requiredText) {
       inputEl.removeEventListener('keydown', onKeyDown);
       cancelBtn.removeEventListener('click', onCancel);
       confirmBtn.removeEventListener('click', onConfirm);
-      modal.classList.remove('active');
+      closeModal(modal);
     };
 
     const onCancel = () => {
@@ -308,31 +433,52 @@ function fromDbRow(row) {
   };
 }
 
-async function loadExpenses() {
-  try {
-    const { data, error } = await supabaseClient
-      .from('transactions')
-      .select('*')
-      .eq('user_id', currentUserId)
-      .order('date', { ascending: true });
+async function loadExpenses(force = false) {
+  // Belum login — jangan query dengan user_id null
+  if (!currentUserId) return [];
 
-    if (error) throw error;
-
-    let needsMigration = false;
-    const updated = (data || []).map(row => {
-      const item = fromDbRow(row);
-      if (!item.type)   { item.type   = 'expense'; needsMigration = true; }
-      if (!item.source) { item.source = 'Dompet';  needsMigration = true; }
-      return item;
-    });
-
-    if (needsMigration) await saveExpenses(updated);
-
-    return updated;
-  } catch (e) {
-    console.error('[loadExpenses]', e);
-    return [];
+  const sameUser = expensesCacheUserId === currentUserId;
+  if (!force && sameUser && expensesCache) return expensesCache;
+  if (!force && sameUser && expensesCachePromise) {
+    const shared = await expensesCachePromise;
+    return shared || [];
   }
+
+  expensesCacheUserId = currentUserId;
+  const request = (async () => {
+    try {
+      const { data, error } = await supabaseClient
+        .from('transactions')
+        .select('*')
+        .eq('user_id', currentUserId)
+        .order('date', { ascending: true });
+
+      if (error) throw error;
+
+      let needsMigration = false;
+      const updated = (data || []).map(row => {
+        const item = fromDbRow(row);
+        if (!item.type)   { item.type   = 'expense'; needsMigration = true; }
+        if (!item.source) { item.source = 'Dompet';  needsMigration = true; }
+        return item;
+      });
+
+      if (needsMigration) await saveExpenses(updated);
+
+      return updated;
+    } catch (e) {
+      console.error('[loadExpenses]', e);
+      return null;
+    }
+  })();
+  expensesCachePromise = request;
+
+  const result = await request;
+  if (expensesCachePromise === request) expensesCachePromise = null;
+  if (!result) return [];
+
+  expensesCache = result;
+  return result;
 }
 
 async function saveExpenses(expenses) {
@@ -343,6 +489,7 @@ async function saveExpenses(expenses) {
       .from('transactions')
       .upsert(rows, { onConflict: 'id' });
     if (error) throw error;
+    invalidateExpensesCache();
   } catch (e) {
     console.error('[saveExpenses]', e);
   }
@@ -353,6 +500,7 @@ async function addExpense(entry) {
     const newEntry = { ...entry, id: generateId() };
     const { error } = await supabaseClient.from('transactions').insert(toDbRow(newEntry));
     if (error) throw error;
+    invalidateExpensesCache();
     return newEntry;
   } catch (e) {
     console.error('[addExpense]', e);
@@ -379,6 +527,7 @@ async function updateExpense(id, updates) {
     if (error) throw error;
     if (!data) return null;
 
+    invalidateExpensesCache();
     return fromDbRow(data);
   } catch (e) {
     console.error('[updateExpense]', e);
@@ -395,6 +544,7 @@ async function deleteExpense(id) {
       .eq('user_id', currentUserId);
 
     if (error) throw error;
+    if (count > 0) invalidateExpensesCache();
     return count > 0;
   } catch (e) {
     console.error('[deleteExpense]', e);
@@ -592,21 +742,10 @@ async function saveBudget(budget) {
       }, { onConflict: 'user_id,month' });
 
     if (error) throw error;
+    return true;
   } catch (e) {
     console.error('[saveBudget]', e);
-  }
-}
-
-async function updateBudget(month, category, amount) {
-  try {
-    const budget = await loadBudget(month);
-    budget.categories[category] = amount;
-    budget.totalBudget = Object.values(budget.categories).reduce((sum, v) => sum + v, 0);
-    await saveBudget(budget);
-    return budget;
-  } catch (e) {
-    console.error('[updateBudget]', e);
-    return null;
+    return false;
   }
 }
 
@@ -852,16 +991,17 @@ function setView(viewName) {
 }
 
 async function doSetView(viewName) {
+  showLoading();
+
   // Clear charts
   Object.keys(activeCharts).forEach(destroyChart);
   
-  // Set tab active state
-  document.querySelectorAll('.nav-item').forEach(item => {
-    if (item.getAttribute('data-tab') === viewName) {
-      item.classList.add('active');
-    } else {
-      item.classList.remove('active');
-    }
+  // Set tab active state + aria-current untuk pembaca layar
+  document.querySelectorAll('.nav-item[data-tab]').forEach(item => {
+    const isActive = item.getAttribute('data-tab') === viewName;
+    item.classList.toggle('active', isActive);
+    if (isActive) item.setAttribute('aria-current', 'page');
+    else item.removeAttribute('aria-current');
   });
 
   // Render view
@@ -940,6 +1080,8 @@ async function doSetView(viewName) {
         await handleLogout();
       }
     });
+  } finally {
+    hideLoading();
   }
 }
 
@@ -1723,9 +1865,11 @@ async function postRenderInputHarian() {
 
     const saved = await addExpense(entry);
     if (!saved) {
-      alert('Gagal menyimpan transaksi. Coba lagi.');
+      showToast('Gagal menyimpan transaksi. Periksa koneksi lalu coba lagi.', 'error');
       return;
     }
+
+    showToast('Transaksi berhasil disimpan.', 'success');
 
     // Reset inputs
     document.getElementById('form-desc').value = '';
@@ -1965,7 +2109,9 @@ window.saveInlineEdit = async function(id) {
 
   const result = await updateExpense(id, updates);
   if (!result) {
-    alert('Gagal menyimpan perubahan. Coba lagi.');
+    showToast('Gagal menyimpan perubahan. Periksa koneksi lalu coba lagi.', 'error');
+  } else {
+    showToast('Perubahan berhasil disimpan.', 'success');
   }
 
   inlineEditingId = null;
@@ -1980,20 +2126,28 @@ const sidebarOverlay = document.getElementById('sidebar-overlay');
 
 window.triggerDelete = function(id) {
   deleteTargetId = id;
-  deleteModal.classList.add('active');
+  openModal(deleteModal);
 };
 
 deleteCancelBtn?.addEventListener('click', () => {
-  deleteModal.classList.remove('active');
+  closeModal(deleteModal);
   deleteTargetId = null;
 });
 
 deleteConfirmBtn?.addEventListener('click', async () => {
-  if (deleteTargetId) {
-    await deleteExpense(deleteTargetId);
-    deleteModal.classList.remove('active');
+  if (!deleteTargetId) return;
+
+  deleteConfirmBtn.disabled = true;
+  showLoading();
+
+  try {
+    const deleted = await deleteExpense(deleteTargetId);
+    closeModal(deleteModal);
     deleteTargetId = null;
-    
+
+    if (deleted) showToast('Transaksi berhasil dihapus.', 'success');
+    else showToast('Gagal menghapus transaksi. Periksa koneksi lalu coba lagi.', 'error');
+
     // Refresh page
     const currentActiveTab = document.querySelector('.nav-item.active')?.getAttribute('data-tab');
     if (currentActiveTab === 'input') {
@@ -2001,6 +2155,9 @@ deleteConfirmBtn?.addEventListener('click', async () => {
     } else {
       await setView(currentActiveTab || 'dashboard');
     }
+  } finally {
+    deleteConfirmBtn.disabled = false;
+    hideLoading();
   }
 });
 
@@ -2124,6 +2281,7 @@ async function postRenderRekapHarian() {
   exportBtn?.addEventListener('click', async () => {
     exportBtn.disabled = true;
     exportBtn.innerHTML = 'Mengekspor...';
+    showLoading();
 
     try {
       const dailyData = await getDailySummaries(currentYear, currentMonth);
@@ -2182,10 +2340,12 @@ async function postRenderRekapHarian() {
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
+      showToast('File CSV berhasil diunduh.', 'success');
     } catch (err) {
       console.error('[exportCSV]', err);
-      alert('Gagal mengekspor CSV: ' + (err && err.message ? err.message : 'terjadi kesalahan tak terduga'));
+      showToast('Gagal mengekspor CSV: ' + (err && err.message ? err.message : 'terjadi kesalahan tak terduga'), 'error');
     } finally {
+      hideLoading();
       exportBtn.disabled = false;
       exportBtn.innerHTML = '<i data-lucide="download" style="width: 14px; height: 14px;"></i> Export CSV';
       lucide.createIcons();
@@ -2196,13 +2356,16 @@ async function postRenderRekapHarian() {
   exportXlsxBtn?.addEventListener('click', async () => {
     exportXlsxBtn.disabled = true;
     exportXlsxBtn.innerHTML = 'Mengekspor...';
+    showLoading();
 
     try {
       await exportToExcel(currentYear, currentMonth);
+      showToast('File Excel berhasil diunduh.', 'success');
     } catch (err) {
       console.error('[exportExcel]', err);
-      alert('Gagal mendownload file Excel: ' + (err && err.message ? err.message : 'terjadi kesalahan tak terduga'));
+      showToast('Gagal mendownload file Excel: ' + (err && err.message ? err.message : 'terjadi kesalahan tak terduga'), 'error');
     } finally {
+      hideLoading();
       exportXlsxBtn.disabled = false;
       exportXlsxBtn.innerHTML = '<i data-lucide="file-spreadsheet" style="width: 14px; height: 14px;"></i> Download Excel (.xlsx)';
       lucide.createIcons();
@@ -2789,27 +2952,36 @@ async function postRenderPengaturan() {
     const eVal = parseInt(ewalletInput.value.replace(/\D/g, '')) || 0;
     const dateVal = dateInput.value || getFirstDayOfActiveMonth();
 
-    const saved = await saveBalance({
-      initialDompet: dVal,
-      initialATM: aVal,
-      initialEWallet: eVal,
-      initialDate: dateVal
-    });
+    saveBalanceBtn.disabled = true;
+    showLoading();
 
-    if (saved) {
-      saveBalanceBtn.innerHTML = '<i data-lucide="check" style="width: 16px; height: 16px;"></i> Tersimpan!';
-      saveBalanceBtn.style.backgroundColor = 'var(--success)';
-    } else {
-      saveBalanceBtn.innerHTML = '<i data-lucide="x" style="width: 16px; height: 16px;"></i> Gagal menyimpan!';
-      saveBalanceBtn.style.backgroundColor = '#c0392b';
-    }
-    lucide.createIcons();
+    try {
+      const saved = await saveBalance({
+        initialDompet: dVal,
+        initialATM: aVal,
+        initialEWallet: eVal,
+        initialDate: dateVal
+      });
 
-    setTimeout(() => {
-      saveBalanceBtn.innerHTML = '<i data-lucide="save" style="width: 16px; height: 16px;"></i> Simpan Saldo Awal';
-      saveBalanceBtn.style.backgroundColor = '';
+      if (saved) {
+        saveBalanceBtn.innerHTML = '<i data-lucide="check" style="width: 16px; height: 16px;"></i> Tersimpan!';
+        saveBalanceBtn.style.backgroundColor = 'var(--success)';
+        showToast('Saldo awal berhasil disimpan.', 'success');
+      } else {
+        saveBalanceBtn.innerHTML = '<i data-lucide="x" style="width: 16px; height: 16px;"></i> Gagal menyimpan!';
+        saveBalanceBtn.style.backgroundColor = '#c0392b';
+        showToast('Gagal menyimpan saldo awal. Periksa koneksi lalu coba lagi.', 'error');
+      }
       lucide.createIcons();
-    }, 2500);
+    } finally {
+      hideLoading();
+      saveBalanceBtn.disabled = false;
+      setTimeout(() => {
+        saveBalanceBtn.innerHTML = '<i data-lucide="save" style="width: 16px; height: 16px;"></i> Simpan Saldo Awal';
+        saveBalanceBtn.style.backgroundColor = '';
+        lucide.createIcons();
+      }, 2500);
+    }
   });
 
   const calcTotal = () => {
@@ -2831,24 +3003,50 @@ async function postRenderPengaturan() {
 
   calcTotal();
 
-  // Save budget handler
+  // Save budget handler — kumpulkan semua field lalu simpan sekali (1 round-trip)
   saveBtn?.addEventListener('click', async () => {
-    const budget = await loadBudget(getActiveMonthStr());
-    for (const f of fields) {
+    const categories = {};
+    let total = 0;
+
+    fields.forEach(f => {
       const cat = f.id.replace('budget-input-', '');
       const amt = parseInt(f.value.replace(/\D/g, '')) || 0;
-      await updateBudget(budget.month, cat, amt);
-    }
+      categories[cat] = amt;
+      total += amt;
+    });
 
-    saveBtn.innerHTML = '<i data-lucide="check" style="width: 16px; height: 16px;"></i> Tersimpan!';
-    saveBtn.style.backgroundColor = 'var(--success)';
+    const originalHtml = saveBtn.innerHTML;
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i data-lucide="loader" style="width: 16px; height: 16px;"></i> Menyimpan...';
     lucide.createIcons();
+    showLoading();
 
-    setTimeout(() => {
-      saveBtn.innerHTML = '<i data-lucide="save" style="width: 16px; height: 16px;"></i> Simpan Budget';
-      saveBtn.style.backgroundColor = '';
+    try {
+      const saved = await saveBudget({
+        month: getActiveMonthStr(),
+        categories,
+        totalBudget: total,
+      });
+
+      if (saved) {
+        saveBtn.innerHTML = '<i data-lucide="check" style="width: 16px; height: 16px;"></i> Tersimpan!';
+        saveBtn.style.backgroundColor = 'var(--success)';
+        showToast('Budget bulan ini berhasil disimpan.', 'success');
+      } else {
+        saveBtn.innerHTML = '<i data-lucide="x" style="width: 16px; height: 16px;"></i> Gagal menyimpan!';
+        saveBtn.style.backgroundColor = '#c0392b';
+        showToast('Gagal menyimpan budget. Periksa koneksi lalu coba lagi.', 'error');
+      }
       lucide.createIcons();
-    }, 2000);
+    } finally {
+      hideLoading();
+      saveBtn.disabled = false;
+      setTimeout(() => {
+        saveBtn.innerHTML = originalHtml;
+        saveBtn.style.backgroundColor = '';
+        lucide.createIcons();
+      }, 2000);
+    }
   });
 
   // Reset database handler — deletes all Supabase data for current user
@@ -2866,6 +3064,7 @@ async function postRenderPengaturan() {
     resetBtn.disabled = true;
     resetBtn.innerHTML = '<i data-lucide="loader" style="width: 14px; height: 14px;"></i> Mereset...';
     lucide.createIcons();
+    showLoading();
 
     try {
       const results = await Promise.all([
@@ -2880,15 +3079,18 @@ async function postRenderPengaturan() {
       localStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem(BUDGET_KEY);
       localStorage.removeItem(BALANCE_KEY);
+      invalidateExpensesCache();
 
-      alert('Data berhasil direset. Semua transaksi, budget, dan saldo awal telah dihapus.');
+      showToast('Data berhasil direset. Semua transaksi, budget, dan saldo awal telah dihapus.', 'success');
       await setView('dashboard');
     } catch (e) {
       console.error('[resetData]', e);
-      alert('Reset data gagal: ' + (e && e.message ? e.message : 'terjadi kesalahan tak terduga') + '\n\nData Anda tidak berubah.');
+      showToast('Reset data gagal: ' + (e && e.message ? e.message : 'terjadi kesalahan tak terduga') + ' Data Anda tidak berubah.', 'error', 6000);
       resetBtn.disabled = false;
       resetBtn.innerHTML = originalHtml;
       lucide.createIcons();
+    } finally {
+      hideLoading();
     }
   });
 
@@ -3018,7 +3220,9 @@ async function runMigration() {
   }
 
   if (migrationFailed) {
-    alert('Migrasi data lama gagal. Data Anda masih aman di browser. Silakan coba refresh halaman.');
+    showToast('Migrasi data lama gagal. Data Anda masih aman di browser. Silakan muat ulang halaman.', 'error', 6000);
+  } else {
+    invalidateExpensesCache();
   }
 }
 
@@ -3133,12 +3337,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (event === 'SIGNED_IN' && session) {
       if (currentUserId !== session.user.id) {
         currentUserId = session.user.id;
+        invalidateExpensesCache();
         hideAuthScreen();
         await runMigration();
         await setView('dashboard');
       }
     } else if (event === 'SIGNED_OUT') {
       currentUserId = null;
+      invalidateExpensesCache();
       showAuthScreen();
     }
   });
@@ -3148,6 +3354,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (session) {
     if (currentUserId !== session.user.id) {
       currentUserId = session.user.id;
+      invalidateExpensesCache();
       hideAuthScreen();
       await runMigration();
       await setView('dashboard');
